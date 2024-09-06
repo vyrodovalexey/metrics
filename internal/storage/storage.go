@@ -27,5 +27,3 @@ func (storage *MemStorage) AddCounter(name string, item CounterItem) {
 func (storage *MemStorage) AddGauge(name string, item GaugeItem) {
 	storage.Gauge[name] = item
 }
-
-var Storage MemStorage
