@@ -1,14 +1,39 @@
 package main
 
 import (
-	"github.com/vyrodovalexey/metrics/internal/storage"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
 
-var Storage storage.MemStorage
+type gauge = float64
+type counter = int64
+
+type GaugeItem struct {
+	Value gauge
+	Date  time.Time
+}
+
+type CounterItem struct {
+	Value counter
+	Date  time.Time
+}
+
+type MemStorage struct {
+	Gauge   map[string]GaugeItem
+	Counter map[string][]CounterItem
+}
+
+func (storage *MemStorage) AddCounter(name string, item CounterItem) {
+	storage.Counter[name] = append(storage.Counter[name], item)
+}
+
+func (storage *MemStorage) AddGauge(name string, item GaugeItem) {
+	storage.Gauge[name] = item
+}
+
+var Storage MemStorage
 
 func Update(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -37,7 +62,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			gauge, _ := strconv.ParseFloat(pathSlice[3], 64)
-			Storage.AddGauge(pathSlice[2], storage.GaugeItem{gauge, time.Now()})
+			Storage.AddGauge(pathSlice[2], GaugeItem{gauge, time.Now()})
 		}
 	}
 
@@ -49,7 +74,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 		} else {
 			counter, _ := strconv.ParseInt(pathSlice[3], 10, 64)
 
-			Storage.AddCounter(pathSlice[2], storage.CounterItem{counter, time.Now()})
+			Storage.AddCounter(pathSlice[2], CounterItem{counter, time.Now()})
 		}
 	}
 
@@ -60,10 +85,10 @@ func run() error {
 }
 
 func main() {
-	gauge := make(map[string]storage.GaugeItem)
-	counter := make(map[string][]storage.CounterItem)
+	gauge := make(map[string]GaugeItem)
+	counter := make(map[string][]CounterItem)
 
-	Storage = storage.MemStorage{gauge, counter}
+	Storage = MemStorage{gauge, counter}
 
 	http.HandleFunc("/update/", Update)
 	if err := run(); err != nil {
