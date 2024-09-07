@@ -14,7 +14,7 @@ type MemStorage struct {
 
 func (storage *MemStorage) AddCounter(name string, item string) error {
 	counter, err := strconv.ParseInt(item, 10, 64)
-	if err != nil {
+	if err == nil {
 		storage.CounterMap[name] = append(storage.CounterMap[name], counter)
 	}
 	return err
@@ -23,7 +23,7 @@ func (storage *MemStorage) AddCounter(name string, item string) error {
 
 func (storage *MemStorage) AddGauge(name string, item string) error {
 	gauge, err := strconv.ParseFloat(item, 64)
-	if err != nil {
+	if err == nil {
 		storage.GaugeMap[name] = gauge
 	}
 	return err
