@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/storage"
+	"log"
 	"math/rand"
 	"net/http"
 	"reflect"
@@ -48,12 +49,15 @@ type metrics struct {
 }
 
 func SendMetric(cl http.Client, url string) {
-	req, err := http.NewRequest("POST", url, nil)
+	req, _ := http.NewRequest("POST", url, nil)
+
 	req.Header.Set("Content-Type", "text/plain")
-	_, err = cl.Do(req)
+
+	resp, err := cl.Do(req)
 	if err != nil {
-		fmt.Printf("Error : %s", err)
+		log.Fatal(err)
 	}
+	fmt.Println(resp)
 }
 
 func main() {
