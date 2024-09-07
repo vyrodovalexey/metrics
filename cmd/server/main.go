@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/vyrodovalexey/metrics/internal/handlers"
 	"github.com/vyrodovalexey/metrics/internal/storage"
+	"log"
 	"net/http"
 )
 
@@ -12,12 +13,7 @@ func main() {
 	counter := make(map[string][]storage.Counter)
 	mst := storage.MemStorage{GaugeMap: gauge, CounterMap: counter}
 
-	mux := http.NewServeMux()
-	wrappedMuxUpdate := handlers.NewStorageHandler(mux, &mst)
-	mux.HandleFunc("/update/", handlers.Update)
-	err := http.ListenAndServe(`:8080`, wrappedMuxUpdate)
+	http.HandleFunc("/update/", handlers.Update(&mst))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 
-	if err != nil {
-		panic(err)
-	}
 }
