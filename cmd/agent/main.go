@@ -58,6 +58,7 @@ func SendMetric(cl http.Client, url string) {
 		log.Fatal(err)
 	}
 	fmt.Println(resp)
+	defer resp.Body.Close()
 }
 
 func main() {
