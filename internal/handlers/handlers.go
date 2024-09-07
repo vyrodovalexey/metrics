@@ -3,7 +3,6 @@ package handlers
 import (
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -25,31 +24,27 @@ func Update(st *storage.MemStorage) http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if len(pathSlice) != 4 || (pathSlice[1] != "gauge" && pathSlice[1] != "counter") {
+		if len(pathSlice) != 4 {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if pathSlice[1] == "gauge" {
-			_, err := strconv.ParseFloat(pathSlice[3], 64)
+		switch pathSlice[1] {
+		case "gauge":
+			err := st.AddGauge(pathSlice[2], pathSlice[3])
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
-			} else {
-				gauge, _ := strconv.ParseFloat(pathSlice[3], 64)
-				st.AddGauge(pathSlice[2], gauge)
 			}
-		}
-
-		if pathSlice[1] == "counter" {
-			_, err := strconv.ParseInt(pathSlice[3], 10, 64)
+		case "counter":
+			err := st.AddCounter(pathSlice[2], pathSlice[3])
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
-			} else {
-				counter, _ := strconv.ParseInt(pathSlice[3], 10, 64)
-				st.AddCounter(pathSlice[2], counter)
 			}
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 	}
 }
