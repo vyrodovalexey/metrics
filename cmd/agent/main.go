@@ -112,6 +112,7 @@ func main() {
 	var metrict string
 	go ScribeMetrics(&m, pollInterval, -1)
 	for {
+		time.Sleep(reportPollInterval * time.Second)
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
@@ -126,7 +127,6 @@ func main() {
 				r := fmt.Sprintf("http://localhost:8080/update/%s/%s/%v", metrict, typ.Field(i).Name, val.Field(i))
 				SendMetric(*client, r)
 			}
-			time.Sleep(reportPollInterval * time.Second)
 		}
 	}
 }
