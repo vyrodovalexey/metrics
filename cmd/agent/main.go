@@ -121,7 +121,7 @@ func main() {
 				default:
 					metrict = "gauge"
 				}
-				r := fmt.Sprintf("http://127.0.0.1:8080/update/%s/%s/%v", metrict, typ.Field(i).Name, val.Field(i))
+				r := fmt.Sprintf("http://localhost:8080/update/%s/%s/%v", metrict, typ.Field(i).Name, val.Field(i))
 				SendMetric(*client, r)
 			}
 			time.Sleep(reportPollInterval * time.Second)
