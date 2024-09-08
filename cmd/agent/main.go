@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	pollInterval       = 1
-	reportPollInterval = 1
+	pollInterval       = 2
+	reportPollInterval = 10
 )
 
 type metrics struct {
@@ -49,8 +49,10 @@ type metrics struct {
 }
 
 func SendMetric(cl http.Client, url string) {
-	req, _ := http.NewRequest("POST", url, nil)
-
+	req, errr := http.NewRequest("POST", url, nil)
+	if errr != nil {
+		log.Fatal(errr)
+	}
 	req.Header.Set("Content-Type", "text/plain")
 
 	resp, err := cl.Do(req)
@@ -121,7 +123,7 @@ func main() {
 				default:
 					metrict = "gauge"
 				}
-				r := fmt.Sprintf("http://127.0.0.1:8080/update/%s/%s/%v", metrict, typ.Field(i).Name, val.Field(i))
+				r := fmt.Sprintf("http://localhost:8080/update/%s/%s/%v", metrict, typ.Field(i).Name, val.Field(i))
 				SendMetric(*client, r)
 			}
 			time.Sleep(reportPollInterval * time.Second)
