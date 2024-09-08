@@ -83,6 +83,7 @@ func TestUpdate(t *testing.T) {
 			if res.StatusCode != tt.expectedStatus {
 				t.Errorf("expected status %d, got %d", tt.expectedStatus, res.StatusCode)
 			}
+			defer res.Body.Close()
 		})
 	}
 }
