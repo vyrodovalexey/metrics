@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	pollInterval       = 2
-	reportPollInterval = 10
+	pollInterval       = 1
+	reportPollInterval = 1
 )
 
 type metrics struct {
