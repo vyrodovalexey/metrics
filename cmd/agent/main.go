@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/caarlos0/env/v6"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"log"
 	"math/rand"
@@ -11,6 +12,12 @@ import (
 	"runtime"
 	"time"
 )
+
+type Config struct {
+	EndpointAddr       string `env:"ADDRESS"`
+	ReportPoolInterval int    `env:"REPORT_INTERVAL"`
+	PoolInterval       int    `env:"POLL_INTERVAL"`
+}
 
 type metrics struct {
 	Alloc         storage.Gauge
@@ -102,18 +109,31 @@ func ScribeMetrics(m *metrics, p time.Duration, stopcount int64) {
 }
 
 func main() {
-	endpointAddr := flag.String("a", "localhost:8080", "input ip:port or host:port of metrics server")
-	reportPoolInterval := flag.Int("r", 10, "seconds delay interval to send metrics to metrics server")
-	poolInterval := flag.Int("p", 2, "seconds delay between scribing metrics from host")
 
+	var cfg Config
+	err := env.Parse(&cfg)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(cfg.EndpointAddr) == 0 {
+		flag.StringVar(&cfg.EndpointAddr, "a", "localhost:8080", "input ip:port or host:port of metrics server")
+	}
+	if cfg.ReportPoolInterval < 1 {
+		flag.IntVar(&cfg.ReportPoolInterval, "r", 10, "seconds delay interval to send metrics to metrics server")
+	}
+	if cfg.PoolInterval < 1 {
+		flag.IntVar(&cfg.PoolInterval, "p", 2, "seconds delay between scribing metrics from host")
+	}
 	flag.Parse()
 	client := &http.Client{}
 	m := metrics{}
 	// variable for setup
 	var metrict string
-	go ScribeMetrics(&m, time.Duration(*poolInterval), -1)
+	go ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
-		time.Sleep(time.Duration(*reportPoolInterval) * time.Second)
+		time.Sleep(time.Duration(cfg.ReportPoolInterval) * time.Second)
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
@@ -125,7 +145,7 @@ func main() {
 				default:
 					metrict = "gauge"
 				}
-				r := fmt.Sprintf("http://%s/update/%s/%s/%v", *endpointAddr, metrict, typ.Field(i).Name, val.Field(i))
+				r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metrict, typ.Field(i).Name, val.Field(i))
 				SendMetric(*client, r)
 			}
 		}
