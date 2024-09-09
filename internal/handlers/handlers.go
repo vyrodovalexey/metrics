@@ -57,7 +57,7 @@ func Get(st *storage.MemStorage) gin.HandlerFunc {
 		case "gauge":
 			g, e := st.GetGauge(c.Param("name"))
 			if e == false {
-				c.JSON(http.StatusBadRequest, gin.H{
+				c.JSON(http.StatusNotFound, gin.H{
 					"error": "Bad Request",
 				})
 				return
@@ -68,7 +68,7 @@ func Get(st *storage.MemStorage) gin.HandlerFunc {
 		case "counter":
 			g, e := st.GetCounter(c.Param("name"))
 			if e == false {
-				c.JSON(http.StatusBadRequest, gin.H{
+				c.JSON(http.StatusNotFound, gin.H{
 					"error": "Bad Request",
 				})
 				return
