@@ -59,11 +59,11 @@ func SendMetric(cl http.Client, url string) {
 	defer resp.Body.Close()
 }
 
-func ScribeMetrics(m *metrics, p time.Duration, stopcount int64) {
+func ScribeMetrics(m *metrics, p time.Duration, stop int64) {
 	var memStats runtime.MemStats
 
 	for {
-		if m.PollCount >= stopcount && stopcount != -1 {
+		if m.PollCount >= stop && stop != -1 {
 			return
 		} else {
 			runtime.ReadMemStats(&memStats)
