@@ -79,7 +79,7 @@ func TestMemStorage_Positive_AddCounter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := &MemStorage{
-				CounterMap: make(map[string][]Counter),
+				CounterMap: make(map[string]Counter),
 			}
 			if err := storage.AddCounter(tt.args.name, tt.args.item); err != tt.wantErr {
 				t.Errorf("AddCounter() error = %v, dontWantErr %v", err, tt.wantErr)
@@ -112,7 +112,7 @@ func TestMemStorage_Negative_AddCounter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := &MemStorage{
-				CounterMap: make(map[string][]Counter),
+				CounterMap: make(map[string]Counter),
 			}
 			if err := storage.AddCounter(tt.args.name, tt.args.item); err == tt.dontWantErr {
 				t.Errorf("AddCounter() error = %v, dontWantErr %v", err, tt.dontWantErr)
@@ -137,7 +137,7 @@ func TestMemStorage_Positive_GetAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := &MemStorage{
-				CounterMap: make(map[string][]Counter),
+				CounterMap: make(map[string]Counter),
 				GaugeMap:   make(map[string]Gauge),
 			}
 			storage.AddCounter("test", "12")
