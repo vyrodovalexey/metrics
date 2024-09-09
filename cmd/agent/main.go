@@ -14,9 +14,9 @@ import (
 )
 
 type Config struct {
-	EndpointAddr       string `env:"ADDRESS"`
-	ReportPoolInterval int    `env:"REPORT_INTERVAL"`
-	PoolInterval       int    `env:"POLL_INTERVAL"`
+	EndpointAddr   string `env:"ADDRESS"`
+	ReportInterval int    `env:"REPORT_INTERVAL"`
+	PoolInterval   int    `env:"POLL_INTERVAL"`
 }
 
 type metrics struct {
@@ -66,11 +66,11 @@ func SendMetric(cl http.Client, url string) {
 	defer resp.Body.Close()
 }
 
-func ScribeMetrics(m *metrics, p time.Duration, stopcount int64) {
+func ScribeMetrics(m *metrics, p time.Duration, stop int64) {
 	var memStats runtime.MemStats
 
 	for {
-		if m.PollCount >= stopcount && stopcount != -1 {
+		if m.PollCount >= stop && stop != -1 {
 			return
 		} else {
 			runtime.ReadMemStats(&memStats)
@@ -120,8 +120,8 @@ func main() {
 	if len(cfg.EndpointAddr) == 0 {
 		flag.StringVar(&cfg.EndpointAddr, "a", "localhost:8080", "input ip:port or host:port of metrics server")
 	}
-	if cfg.ReportPoolInterval < 1 {
-		flag.IntVar(&cfg.ReportPoolInterval, "r", 10, "seconds delay interval to send metrics to metrics server")
+	if cfg.ReportInterval < 1 {
+		flag.IntVar(&cfg.ReportInterval, "r", 10, "seconds delay interval to send metrics to metrics server")
 	}
 	if cfg.PoolInterval < 1 {
 		flag.IntVar(&cfg.PoolInterval, "p", 2, "seconds delay between scribing metrics from host")
@@ -133,7 +133,7 @@ func main() {
 	var metrict string
 	go ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
-		time.Sleep(time.Duration(cfg.ReportPoolInterval) * time.Second)
+		time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
