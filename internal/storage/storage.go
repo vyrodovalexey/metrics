@@ -57,7 +57,7 @@ func (storage *MemStorage) GetAllMetricNames() (map[string]string, map[string]st
 
 func (storage *MemStorage) GetGauge(name string) (Gauge, bool) {
 	res, e := storage.GaugeMap[name]
-	if e == true {
+	if e {
 		return res, e
 	}
 	return 0, false
@@ -67,7 +67,7 @@ func (storage *MemStorage) GetGauge(name string) (Gauge, bool) {
 func (storage *MemStorage) GetCounter(name string) ([]Counter, bool) {
 	res, e := storage.CounterMap[name]
 
-	if e == true {
+	if e {
 		return res, e
 	}
 	return nil, false
