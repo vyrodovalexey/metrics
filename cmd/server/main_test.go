@@ -45,14 +45,6 @@ func TestRequest(t *testing.T) {
 			mimetype:       "text/plain",
 			expectedStatus: http.StatusNotFound,
 		},
-		/*		{
-				name:           "Invalid MediaType",
-				st:             &mst,
-				method:         http.MethodPost,
-				url:            "/update/gauge/test/1.12",
-				mimetype:       "application/json",
-				expectedStatus: http.StatusUnsupportedMediaType,
-			},*/
 		{
 			name:           "Invalid Gauge",
 			st:             &mst,
