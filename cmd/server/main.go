@@ -10,7 +10,7 @@ import (
 func main() {
 
 	gauge := make(map[string]storage.Gauge)
-	counter := make(map[string][]storage.Counter)
+	counter := make(map[string]storage.Counter)
 	mst := storage.MemStorage{GaugeMap: gauge, CounterMap: counter}
 
 	http.HandleFunc("/update/", handlers.Update(&mst))
