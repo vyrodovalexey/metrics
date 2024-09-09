@@ -12,8 +12,10 @@ import (
 )
 
 const (
-	pollInterval       = 2
-	reportPollInterval = 10
+	pollInterval   = 2
+	reportInterval = 10
+	address        = "localhost:8080"
+	stopCount      = -1
 )
 
 type metrics struct {
@@ -63,11 +65,11 @@ func SendMetric(cl http.Client, url string) {
 	defer resp.Body.Close()
 }
 
-func ScribeMetrics(m *metrics, p time.Duration, stopcount int64) {
+func ScribeMetrics(m *metrics, p time.Duration, stop int64) {
 	var memStats runtime.MemStats
 
 	for {
-		if m.PollCount >= stopcount && stopcount != -1 {
+		if m.PollCount >= stop && stop != -1 {
 			return
 		} else {
 			runtime.ReadMemStats(&memStats)
@@ -110,9 +112,9 @@ func main() {
 	m := metrics{}
 	// variable for setup
 	var metrict string
-	go ScribeMetrics(&m, pollInterval, -1)
+	go ScribeMetrics(&m, pollInterval, stopCount)
 	for {
-		time.Sleep(reportPollInterval * time.Second)
+		time.Sleep(reportInterval * time.Second)
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
@@ -124,7 +126,7 @@ func main() {
 				default:
 					metrict = "gauge"
 				}
-				r := fmt.Sprintf("http://localhost:8080/update/%s/%s/%v", metrict, typ.Field(i).Name, val.Field(i))
+				r := fmt.Sprintf("http://%s/update/%s/%s/%v", address, metrict, typ.Field(i).Name, val.Field(i))
 				SendMetric(*client, r)
 			}
 		}
