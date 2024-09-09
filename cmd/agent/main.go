@@ -103,7 +103,7 @@ func ScribeMetrics(m *metrics, p time.Duration, stop int64) {
 
 func main() {
 	endpointAddr := flag.String("a", "localhost:8080", "input ip:port or host:port of metrics server")
-	reportPoolInterval := flag.Int("r", 10, "seconds delay interval to send metrics to metrics server")
+	reportInterval := flag.Int("r", 10, "seconds delay interval to send metrics to metrics server")
 	poolInterval := flag.Int("p", 2, "seconds delay between scribing metrics from host")
 
 	flag.Parse()
@@ -113,7 +113,7 @@ func main() {
 	var metrict string
 	go ScribeMetrics(&m, time.Duration(*poolInterval), -1)
 	for {
-		time.Sleep(time.Duration(*reportPoolInterval) * time.Second)
+		time.Sleep(time.Duration(*reportInterval) * time.Second)
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
