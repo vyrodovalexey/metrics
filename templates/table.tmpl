@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }}</title>
+</head>
+<body>
+    <h1>{{ .Title }}</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Name</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range $index, $value  := .GaugeValues }}
+            <tr>
+                <td>Gauge</td>
+                <td>{{ $index }}</td>
+                <td>{{ $value }}</td>
+            </tr>
+            {{ end }}
+            {{ range $index, $value  := .CounterValues }}
+            <tr>
+                <td>Counter</td>
+                <td>{{ $index }}</td>
+                <td>{{ $value }}</td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+</body>
+</html>

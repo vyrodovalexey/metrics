@@ -1,18 +1,18 @@
 package main
 
 import (
-	"github.com/vyrodovalexey/metrics/internal/handlers"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestUpdate(t *testing.T) {
+func TestRequest(t *testing.T) {
 	gauge := make(map[string]storage.Gauge)
 	counter := make(map[string]storage.Counter)
 	mst := storage.MemStorage{GaugeMap: gauge, CounterMap: counter}
-
+	router := SetupRouter(&mst)
+	router.LoadHTMLGlob("../../templates/*")
 	tests := []struct {
 		name           string
 		st             *storage.MemStorage
@@ -43,15 +43,7 @@ func TestUpdate(t *testing.T) {
 			method:         http.MethodGet,
 			url:            "/update/gauge/test/1.12",
 			mimetype:       "text/plain",
-			expectedStatus: http.StatusMethodNotAllowed,
-		},
-		{
-			name:           "Invalid MediaType",
-			st:             &mst,
-			method:         http.MethodPost,
-			url:            "/update/gauge/test/1.12",
-			mimetype:       "application/json",
-			expectedStatus: http.StatusUnsupportedMediaType,
+			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "Invalid Gauge",
@@ -69,6 +61,38 @@ func TestUpdate(t *testing.T) {
 			mimetype:       "text/plain",
 			expectedStatus: http.StatusBadRequest,
 		},
+		{
+			name:           "Get counter",
+			st:             &mst,
+			method:         http.MethodGet,
+			url:            "/value/counter/test",
+			mimetype:       "text/plain",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Get gauge",
+			st:             &mst,
+			method:         http.MethodGet,
+			url:            "/value/gauge/test",
+			mimetype:       "text/plain",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Invalid Get gauge",
+			st:             &mst,
+			method:         http.MethodGet,
+			url:            "/value/gauge/unavailable",
+			mimetype:       "text/plain",
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "Get /",
+			st:             &mst,
+			method:         http.MethodGet,
+			url:            "/",
+			mimetype:       "text/html",
+			expectedStatus: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
@@ -76,14 +100,11 @@ func TestUpdate(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.url, nil)
 			req.Header.Add("Content-Type", tt.mimetype)
 			w := httptest.NewRecorder()
-			h := handlers.Update(tt.st)
-			h(w, req)
+			router.ServeHTTP(w, req)
 
-			res := w.Result()
-			if res.StatusCode != tt.expectedStatus {
-				t.Errorf("expected status %d, got %d", tt.expectedStatus, res.StatusCode)
+			if w.Code != tt.expectedStatus {
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
-			defer res.Body.Close()
 		})
 	}
 }

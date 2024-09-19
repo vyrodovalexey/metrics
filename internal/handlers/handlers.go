@@ -1,50 +1,83 @@
 package handlers
 
 import (
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"net/http"
-	"strings"
 )
 
-func Update(st *storage.MemStorage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Update(st *storage.MemStorage) gin.HandlerFunc {
+	return func(c *gin.Context) {
 
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		if r.Header.Get("Content-Type") != "text/plain" {
-			w.WriteHeader(http.StatusUnsupportedMediaType)
-			return
-		}
-
-		pathSlice := strings.Split(r.URL.Path[1:], "/")
-
-		if len(pathSlice) == 3 && (pathSlice[1] == "gauge" || pathSlice[1] == "counter") {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		if len(pathSlice) != 4 {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		switch pathSlice[1] {
+		switch c.Param("type") {
 		case "gauge":
-			err := st.AddGauge(pathSlice[2], pathSlice[3])
+			err := st.AddGauge(c.Param("name"), c.Param("value"))
 			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": "Bad Request",
+				})
 			}
 		case "counter":
-			err := st.AddCounter(pathSlice[2], pathSlice[3])
+			err := st.AddCounter(c.Param("name"), c.Param("value"))
 			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": "Bad Request",
+				})
 			}
 		default:
-			w.WriteHeader(http.StatusBadRequest)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Bad Request",
+			})
 			return
 		}
+	}
+}
+
+func Get(st *storage.MemStorage) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		switch c.Param("type") {
+		case "gauge":
+			g, e := st.GetGauge(c.Param("name"))
+			if !e {
+				c.JSON(http.StatusNotFound, gin.H{
+					"error": "Bad Request",
+				})
+				return
+			} else {
+				gs := fmt.Sprintf("%v", g)
+				c.String(http.StatusOK, gs)
+			}
+		case "counter":
+			g, e := st.GetCounter(c.Param("name"))
+			if !e {
+				c.JSON(http.StatusNotFound, gin.H{
+					"error": "Bad Request",
+				})
+				return
+			} else {
+				gs := fmt.Sprintf("%v", g)
+				c.String(http.StatusOK, gs)
+			}
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Bad Request",
+			})
+			return
+		}
+	}
+}
+
+func GetAllKeys(st *storage.MemStorage) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		gval, cval := st.GetAllMetricNames()
+		c.HTML(200, "table.tmpl", gin.H{
+			"Title":         "Metric Names",
+			"GaugeValues":   gval,
+			"CounterValues": cval,
+		})
+
 	}
 }

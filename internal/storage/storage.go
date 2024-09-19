@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -28,4 +29,46 @@ func (storage *MemStorage) AddGauge(name string, item string) error {
 	}
 	return err
 
+}
+
+func (storage *MemStorage) GetAllMetricNames() (map[string]string, map[string]string) {
+	//to debug
+	//names := make([]string, 0, len(storage.GaugeMap)+len(storage.CounterMap))
+	gvalues := make(map[string]string, len(storage.GaugeMap))
+
+	cvalues := make(map[string]string, len(storage.CounterMap))
+	// Iterate over the map and collect the keys
+	for name := range storage.GaugeMap {
+		//to debug
+		//names = append(names, name)
+		gv, _ := storage.GetGauge(name)
+		gvalues[name] = fmt.Sprintf("%v", gv)
+	}
+
+	for name := range storage.CounterMap {
+		//to debug
+		//names = append(names, name)
+		cv, _ := storage.GetCounter(name)
+		cvalues[name] = fmt.Sprintf("%v", cv)
+	}
+
+	return gvalues, cvalues
+}
+
+func (storage *MemStorage) GetGauge(name string) (Gauge, bool) {
+	res, e := storage.GaugeMap[name]
+	if e {
+		return res, e
+	}
+	return 0, false
+
+}
+
+func (storage *MemStorage) GetCounter(name string) (Counter, bool) {
+	res, e := storage.CounterMap[name]
+
+	if e {
+		return res, e
+	}
+	return 0, false
 }

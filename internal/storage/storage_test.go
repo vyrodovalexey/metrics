@@ -120,3 +120,35 @@ func TestMemStorage_Negative_AddCounter(t *testing.T) {
 		})
 	}
 }
+
+func TestMemStorage_Positive_GetAll(t *testing.T) {
+
+	tests := []struct {
+		name           string
+		countermapsize int
+		gaugemapsize   int
+	}{
+		{
+			name:           "positive get test #1",
+			countermapsize: 1,
+			gaugemapsize:   1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &MemStorage{
+				CounterMap: make(map[string]Counter),
+				GaugeMap:   make(map[string]Gauge),
+			}
+			storage.AddCounter("test", "12")
+			storage.AddGauge("test", "12.1")
+			gres, cres := storage.GetAllMetricNames()
+			if len(cres) < tt.countermapsize {
+				t.Errorf("Size of ConterMap is %d and it less then required size %d", len(cres), tt.countermapsize)
+			}
+			if len(gres) < tt.gaugemapsize {
+				t.Errorf("Size of GaugeMap is %d and it less then required size %d", len(gres), tt.gaugemapsize)
+			}
+		})
+	}
+}

@@ -1,10 +1,7 @@
 package main
 
 import (
-	"github.com/vyrodovalexey/metrics/internal/handlers"
 	"github.com/vyrodovalexey/metrics/internal/storage"
-	"log"
-	"net/http"
 )
 
 func main() {
@@ -13,7 +10,8 @@ func main() {
 	counter := make(map[string]storage.Counter)
 	mst := storage.MemStorage{GaugeMap: gauge, CounterMap: counter}
 
-	http.HandleFunc("/update/", handlers.Update(&mst))
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	r := SetupRouter(&mst)
+	r.LoadHTMLGlob("templates/*")
+	r.Run(":8080")
 
 }
