@@ -131,9 +131,11 @@ func main() {
 	m := metrics{}
 	// variable for setup
 	var metrict string
+
 	go ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
 		time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
+
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
@@ -145,7 +147,9 @@ func main() {
 				default:
 					metrict = "gauge"
 				}
+
 				r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metrict, typ.Field(i).Name, val.Field(i))
+
 				SendMetric(*client, r)
 			}
 		}
