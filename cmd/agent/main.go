@@ -128,7 +128,7 @@ func main() {
 					metrict = "gauge"
 				}
 
-				r := fmt.Sprintf("http://%s/update/%s/%s/%v", endpointAddr, metrict, typ.Field(i).Name, val.Field(i))
+				r := fmt.Sprintf("http://%s/update/%s/%s/%v", *endpointAddr, metrict, typ.Field(i).Name, val.Field(i))
 				SendMetric(*client, r)
 			}
 		}
