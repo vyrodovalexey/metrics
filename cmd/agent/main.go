@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"log"
@@ -9,13 +10,6 @@ import (
 	"reflect"
 	"runtime"
 	"time"
-)
-
-const (
-	pollInterval   = 2
-	reportInterval = 10
-	address        = "localhost:8080"
-	stopCount      = -1
 )
 
 type metrics struct {
@@ -108,13 +102,20 @@ func ScribeMetrics(m *metrics, p time.Duration, stop int64) {
 }
 
 func main() {
+	endpointAddr := flag.String("a", "localhost:8080", "input ip:port or host:port of metrics server")
+	reportInterval := flag.Int("r", 10, "seconds delay interval to send metrics to metrics server")
+	pollInterval := flag.Int("p", 2, "seconds delay between scribing metrics from host")
+
+	flag.Parse()
 	client := &http.Client{}
 	m := metrics{}
 	// variable for setup
 	var metrict string
-	go ScribeMetrics(&m, pollInterval, stopCount)
+
+	go ScribeMetrics(&m, time.Duration(*pollInterval), -1)
 	for {
-		time.Sleep(reportInterval * time.Second)
+		time.Sleep(time.Duration(*reportInterval) * time.Second)
+
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
@@ -126,7 +127,8 @@ func main() {
 				default:
 					metrict = "gauge"
 				}
-				r := fmt.Sprintf("http://%s/update/%s/%s/%v", address, metrict, typ.Field(i).Name, val.Field(i))
+
+				r := fmt.Sprintf("http://%s/update/%s/%s/%v", *endpointAddr, metrict, typ.Field(i).Name, val.Field(i))
 				SendMetric(*client, r)
 			}
 		}
