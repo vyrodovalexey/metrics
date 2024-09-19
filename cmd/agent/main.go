@@ -12,6 +12,16 @@ import (
 	"time"
 )
 
+
+
+const (
+	pollInterval   = 2
+	reportInterval = 10
+	address        = "localhost:8080"
+	stopCount      = -1
+)
+
+
 type metrics struct {
 	Alloc         storage.Gauge
 	BuckHashSys   storage.Gauge
@@ -111,9 +121,11 @@ func main() {
 	m := metrics{}
 	// variable for setup
 	var metrict string
-	go ScribeMetrics(&m, time.Duration(*poolInterval), -1)
+
+	go ScribeMetrics(&m, pollInterval, stopCount)
 	for {
-		time.Sleep(time.Duration(*reportInterval) * time.Second)
+		time.Sleep(reportInterval * time.Second)
+
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
@@ -125,7 +137,8 @@ func main() {
 				default:
 					metrict = "gauge"
 				}
-				r := fmt.Sprintf("http://%s/update/%s/%s/%v", *endpointAddr, metrict, typ.Field(i).Name, val.Field(i))
+
+				r := fmt.Sprintf("http://%s/update/%s/%s/%v", address, metrict, typ.Field(i).Name, val.Field(i))
 				SendMetric(*client, r)
 			}
 		}
