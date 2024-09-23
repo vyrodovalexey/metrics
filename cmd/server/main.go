@@ -20,9 +20,9 @@ type Config struct {
 
 func main() {
 
-	gauge := make(map[string]storage.Gauge)
-	counter := make(map[string]storage.Counter)
-	mst := storage.MemStorage{GaugeMap: gauge, CounterMap: counter}
+	var st storage.Storage = &storage.MemStorage{}
+	st.Init()
+
 	loggerConfig := zap.NewProductionConfig()
 	loggerConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
 	loggerConfig.DisableCaller = true
@@ -34,7 +34,7 @@ func main() {
 	// nolint:errcheck
 	defer logger.Sync()
 
-	sugar := logger.Sugar()
+	sugarLog := logger.Sugar()
 
 	var cfg Config
 	err := env.Parse(&cfg)
@@ -47,7 +47,7 @@ func main() {
 		flag.Parse()
 	}
 
-	r := SetupRouter(&mst, sugar)
+	r := SetupRouter(st, sugarLog)
 	r.LoadHTMLGlob("templates/*")
 	r.Run(cfg.ListenAddr)
 

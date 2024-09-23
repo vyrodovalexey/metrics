@@ -7,7 +7,11 @@ import (
 	"net/http"
 )
 
-func Update(st *storage.MemStorage) gin.HandlerFunc {
+const (
+	badrequest = "Bad Request"
+)
+
+func Update(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		switch c.Param("type") {
@@ -15,26 +19,27 @@ func Update(st *storage.MemStorage) gin.HandlerFunc {
 			err := st.AddGauge(c.Param("name"), c.Param("value"))
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
-					"error": "Bad Request",
+					"error": badrequest,
 				})
 			}
+
 		case "counter":
 			err := st.AddCounter(c.Param("name"), c.Param("value"))
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
-					"error": "Bad Request",
+					"error": badrequest,
 				})
 			}
 		default:
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Bad Request",
+				"error": badrequest,
 			})
 			return
 		}
 	}
 }
 
-func Get(st *storage.MemStorage) gin.HandlerFunc {
+func Get(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		switch c.Param("type") {
@@ -42,7 +47,7 @@ func Get(st *storage.MemStorage) gin.HandlerFunc {
 			g, e := st.GetGauge(c.Param("name"))
 			if !e {
 				c.JSON(http.StatusNotFound, gin.H{
-					"error": "Bad Request",
+					"error": badrequest,
 				})
 				return
 			} else {
@@ -53,7 +58,7 @@ func Get(st *storage.MemStorage) gin.HandlerFunc {
 			g, e := st.GetCounter(c.Param("name"))
 			if !e {
 				c.JSON(http.StatusNotFound, gin.H{
-					"error": "Bad Request",
+					"error": badrequest,
 				})
 				return
 			} else {
@@ -62,14 +67,14 @@ func Get(st *storage.MemStorage) gin.HandlerFunc {
 			}
 		default:
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Bad Request",
+				"error": badrequest,
 			})
 			return
 		}
 	}
 }
 
-func GetAllKeys(st *storage.MemStorage) gin.HandlerFunc {
+func GetAllKeys(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		gval, cval := st.GetAllMetricNames()
