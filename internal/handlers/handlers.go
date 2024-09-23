@@ -37,10 +37,26 @@ func UpdateJson(st storage.Storage) gin.HandlerFunc {
 			}
 			switch metrics.MType {
 			case "gauge":
+				//fmt.Printf("%f", metrics.Value)
 				err := st.AddGauge(metrics.ID, fmt.Sprintf("%f", *metrics.Value))
 				if err != nil {
 					c.JSON(http.StatusBadRequest, gin.H{
 						"error": badrequest,
+					})
+					return
+				}
+				g, e := st.GetGauge(metrics.ID)
+				if !e {
+					c.JSON(http.StatusNotFound, gin.H{
+						"error": badrequest,
+					})
+					return
+				} else {
+					gs := fmt.Sprintf("%v", g)
+					c.JSON(http.StatusOK, gin.H{
+						"id":    metrics.ID,
+						"type":  metrics.MType,
+						"value": gs,
 					})
 				}
 
@@ -49,6 +65,21 @@ func UpdateJson(st storage.Storage) gin.HandlerFunc {
 				if err != nil {
 					c.JSON(http.StatusBadRequest, gin.H{
 						"error": badrequest,
+					})
+					return
+				}
+				g, e := st.GetCounter(metrics.ID)
+				if !e {
+					c.JSON(http.StatusNotFound, gin.H{
+						"error": badrequest,
+					})
+					return
+				} else {
+					gs := fmt.Sprintf("%v", g)
+					c.JSON(http.StatusOK, gin.H{
+						"id":    metrics.ID,
+						"type":  metrics.MType,
+						"delta": gs,
 					})
 				}
 			default:
