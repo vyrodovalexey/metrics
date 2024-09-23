@@ -21,28 +21,42 @@ const (
 
 func UpdateJson(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		switch c.Param("type") {
-		case "gauge":
-			err := st.AddGauge(c.Param("name"), c.Param("value"))
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": badrequest,
-				})
-			}
-
-		case "counter":
-			err := st.AddCounter(c.Param("name"), c.Param("value"))
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": badrequest,
-				})
-			}
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{
+		if c.Request.Header.Get("Content-Type") != "application/json" {
+			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
 			})
 			return
+		} else {
+			var metrics Metrics
+			err := json.NewDecoder(c.Request.Body).Decode(&metrics)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": badrequest,
+				})
+				return
+			}
+			switch metrics.MType {
+			case "gauge":
+				err := st.AddGauge(metrics.ID, fmt.Sprintf("%f", *metrics.Value))
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{
+						"error": badrequest,
+					})
+				}
+
+			case "counter":
+				err := st.AddCounter(metrics.ID, fmt.Sprintf("%f", *metrics.Delta))
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{
+						"error": badrequest,
+					})
+				}
+			default:
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": badrequest,
+				})
+				return
+			}
 		}
 	}
 }
