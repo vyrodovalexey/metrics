@@ -12,7 +12,7 @@ func LoggingMiddleware(log *zap.SugaredLogger) gin.HandlerFunc {
 		start := time.Now()
 		size := 0
 		c.Next()
-		end := time.Now().Sub(start) * time.Millisecond
+		end := time.Since(start) * time.Millisecond
 		if c.Writer.Size() != -1 {
 			size = c.Writer.Size()
 		}
