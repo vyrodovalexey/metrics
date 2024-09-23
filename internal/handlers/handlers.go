@@ -45,7 +45,7 @@ func UpdateJson(st storage.Storage) gin.HandlerFunc {
 				}
 
 			case "counter":
-				err := st.AddCounter(metrics.ID, fmt.Sprintf("%f", *metrics.Delta))
+				err := st.AddCounter(metrics.ID, fmt.Sprintf("%d", *metrics.Delta))
 				if err != nil {
 					c.JSON(http.StatusBadRequest, gin.H{
 						"error": badrequest,
