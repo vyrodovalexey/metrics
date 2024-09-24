@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
@@ -17,12 +19,20 @@ const (
 	serverAddr            = "localhost:8080"
 	defaultReportInterval = 10
 	defaultPoolInterval   = 2
+	sendjson              = true
 )
 
 type Config struct {
 	EndpointAddr   string `env:"ADDRESS"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PoolInterval   int    `env:"POLL_INTERVAL"`
+}
+
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
 type metrics struct {
@@ -57,12 +67,28 @@ type metrics struct {
 	PollCount     storage.Counter
 }
 
-func SendMetric(cl http.Client, url string) {
+func SendMetricPlain(cl http.Client, url string) {
 	req, errr := http.NewRequest("POST", url, nil)
 	if errr != nil {
 		log.Fatal(errr)
 	}
 	req.Header.Set("Content-Type", "text/plain")
+
+	resp, err := cl.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
+	defer resp.Body.Close()
+}
+
+func SendMetricJSON(cl http.Client, url string, m *Metrics) {
+	jm, _ := json.Marshal(*m)
+	req, errr := http.NewRequest("POST", url, bytes.NewBuffer(jm))
+	if errr != nil {
+		log.Fatal(errr)
+	}
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := cl.Do(req)
 	if err != nil {
@@ -138,6 +164,8 @@ func main() {
 	// variable for setup
 	var metrict string
 
+	var met Metrics
+
 	go ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
 		time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
@@ -146,17 +174,28 @@ func main() {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
 			for i := 0; i < val.NumField(); i++ {
+				met.ID = typ.Field(i).Name
 				// fucking setup to apply type
 				switch typ.Field(i).Name {
 				case "PollCount":
 					metrict = "counter"
+					met.MType = "counter"
+					sint := val.Field(i).Int()
+					met.Delta = &sint
 				default:
 					metrict = "gauge"
+					met.MType = "gauge"
+					sfloat := val.Field(i).Float()
+					met.Value = &sfloat
 				}
+				if sendjson {
+					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
+					SendMetricJSON(*client, r, &met)
+				} else {
+					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metrict, typ.Field(i).Name, val.Field(i))
 
-				r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metrict, typ.Field(i).Name, val.Field(i))
-
-				SendMetric(*client, r)
+					SendMetricPlain(*client, r)
+				}
 			}
 		}
 	}

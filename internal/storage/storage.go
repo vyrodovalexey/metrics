@@ -5,9 +5,11 @@ type Counter = int64
 
 type Storage interface {
 	Init()
-	AddGauge(key string, value string) error
+	AddGaugeAsString(key string, value string) error
+	AddGauge(key string, value Gauge)
 	GetGauge(key string) (Gauge, bool)
-	AddCounter(key string, value string) error
+	AddCounterAsString(key string, value string) error
+	AddCounter(key string, value Counter)
 	GetCounter(key string) (Counter, bool)
 	GetAllMetricNames() (map[string]string, map[string]string)
 }

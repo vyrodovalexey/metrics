@@ -25,7 +25,7 @@ func TestStorage_Positive_AddGauge(t *testing.T) {
 			var st Storage = &MemStorage{}
 			st.Init()
 
-			if err := st.AddGauge(tt.args.name, tt.args.item); err != tt.wantErr {
+			if err := st.AddGaugeAsString(tt.args.name, tt.args.item); err != tt.wantErr {
 				t.Errorf("AddGauge() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

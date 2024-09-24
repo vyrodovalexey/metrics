@@ -38,13 +38,7 @@ func UpdateJson(st storage.Storage) gin.HandlerFunc {
 			switch metrics.MType {
 			case "gauge":
 				//fmt.Printf("%f", metrics.Value)
-				err := st.AddGauge(metrics.ID, fmt.Sprintf("%f", *metrics.Value))
-				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{
-						"error": badrequest,
-					})
-					return
-				}
+				st.AddGauge(metrics.ID, *metrics.Value)
 				g, e := st.GetGauge(metrics.ID)
 				if !e {
 					c.JSON(http.StatusNotFound, gin.H{
@@ -57,13 +51,7 @@ func UpdateJson(st storage.Storage) gin.HandlerFunc {
 				}
 
 			case "counter":
-				err := st.AddCounter(metrics.ID, fmt.Sprintf("%d", *metrics.Delta))
-				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{
-						"error": badrequest,
-					})
-					return
-				}
+				st.AddCounter(metrics.ID, *metrics.Delta)
 				g, e := st.GetCounter(metrics.ID)
 				if !e {
 					c.JSON(http.StatusNotFound, gin.H{
@@ -89,7 +77,7 @@ func Update(st storage.Storage) gin.HandlerFunc {
 
 		switch c.Param("type") {
 		case "gauge":
-			err := st.AddGauge(c.Param("name"), c.Param("value"))
+			err := st.AddGaugeAsString(c.Param("name"), c.Param("value"))
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": badrequest,
@@ -97,7 +85,7 @@ func Update(st storage.Storage) gin.HandlerFunc {
 			}
 
 		case "counter":
-			err := st.AddCounter(c.Param("name"), c.Param("value"))
+			err := st.AddCounterAsString(c.Param("name"), c.Param("value"))
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": badrequest,
