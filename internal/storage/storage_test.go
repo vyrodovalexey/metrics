@@ -52,7 +52,7 @@ func TestStorage_Negative_AddGauge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var st Storage = &MemStorage{}
 			st.Init()
-			if err := st.AddGauge(tt.args.name, tt.args.item); err == tt.wantErr {
+			if err := st.AddGaugeAsString(tt.args.name, tt.args.item); err == tt.wantErr {
 				t.Errorf("AddGauge() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -79,7 +79,7 @@ func TestStorage_Positive_AddCounter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var st Storage = &MemStorage{}
 			st.Init()
-			if err := st.AddCounter(tt.args.name, tt.args.item); err != tt.wantErr {
+			if err := st.AddCounterAsString(tt.args.name, tt.args.item); err != tt.wantErr {
 				t.Errorf("AddCounter() error = %v, dontWantErr %v", err, tt.wantErr)
 			}
 		})
@@ -111,7 +111,7 @@ func TestStorage_Negative_AddCounter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var st Storage = &MemStorage{}
 			st.Init()
-			if err := st.AddCounter(tt.args.name, tt.args.item); err == tt.dontWantErr {
+			if err := st.AddCounterAsString(tt.args.name, tt.args.item); err == tt.dontWantErr {
 				t.Errorf("AddCounter() error = %v, dontWantErr %v", err, tt.dontWantErr)
 			}
 		})
@@ -135,8 +135,8 @@ func TestStorage_Positive_GetAll(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var st Storage = &MemStorage{}
 			st.Init()
-			st.AddCounter("test", "12")
-			st.AddGauge("test", "12.1")
+			st.AddCounterAsString("test", "12")
+			st.AddGaugeAsString("test", "12.1")
 			gres, cres := st.GetAllMetricNames()
 			if len(cres) < tt.countermapsize {
 				t.Errorf("Size of ConterMap is %d and it less then required size %d", len(cres), tt.countermapsize)

@@ -19,7 +19,7 @@ const (
 	badrequest = "Bad Request"
 )
 
-func UpdateJson(st storage.Storage) gin.HandlerFunc {
+func UpdateJSON(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Header.Get("Content-Type") != "application/json" {
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
@@ -135,7 +135,7 @@ func Get(st storage.Storage) gin.HandlerFunc {
 	}
 }
 
-func GetJson(st storage.Storage) gin.HandlerFunc {
+func GetJSON(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if c.Request.Header.Get("Content-Type") != "application/json" {
