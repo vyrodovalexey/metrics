@@ -52,12 +52,8 @@ func UpdateJson(st storage.Storage) gin.HandlerFunc {
 					})
 					return
 				} else {
-					gs := fmt.Sprintf("%v", g)
-					c.JSON(http.StatusOK, gin.H{
-						"id":    metrics.ID,
-						"type":  metrics.MType,
-						"value": gs,
-					})
+					metrics.Value = &g
+					c.JSON(http.StatusOK, metrics)
 				}
 
 			case "counter":
@@ -75,12 +71,8 @@ func UpdateJson(st storage.Storage) gin.HandlerFunc {
 					})
 					return
 				} else {
-					gs := fmt.Sprintf("%v", g)
-					c.JSON(http.StatusOK, gin.H{
-						"id":    metrics.ID,
-						"type":  metrics.MType,
-						"delta": gs,
-					})
+					metrics.Delta = &g
+					c.JSON(http.StatusOK, metrics)
 				}
 			default:
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -181,12 +173,8 @@ func GetJson(st storage.Storage) gin.HandlerFunc {
 					})
 					return
 				} else {
-					gs := fmt.Sprintf("%v", g)
-					c.JSON(http.StatusOK, gin.H{
-						"id":    metrics.ID,
-						"type":  metrics.MType,
-						"value": gs,
-					})
+					metrics.Value = &g
+					c.JSON(http.StatusOK, metrics)
 				}
 			case "counter":
 				g, e := st.GetCounter(metrics.ID)
@@ -196,12 +184,8 @@ func GetJson(st storage.Storage) gin.HandlerFunc {
 					})
 					return
 				} else {
-					gs := fmt.Sprintf("%v", g)
-					c.JSON(http.StatusOK, gin.H{
-						"id":    metrics.ID,
-						"type":  metrics.MType,
-						"delta": gs,
-					})
+					metrics.Delta = &g
+					c.JSON(http.StatusOK, metrics)
 				}
 			default:
 				c.JSON(http.StatusBadRequest, gin.H{
