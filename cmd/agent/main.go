@@ -19,7 +19,7 @@ const (
 	serverAddr            = "localhost:8080"
 	defaultReportInterval = 10
 	defaultPoolInterval   = 2
-	sendjson              = true
+	sendjson              = false
 )
 
 type Config struct {
