@@ -10,7 +10,7 @@ type MemStorage struct {
 	CounterMap map[string]Counter
 }
 
-func (m *MemStorage) Init() {
+func (m *MemStorage) New() {
 	m.GaugeMap = make(map[string]Gauge)
 	m.CounterMap = make(map[string]Counter)
 }
@@ -26,6 +26,7 @@ func (m *MemStorage) AddCounterAsString(name string, item string) error {
 
 func (m *MemStorage) AddCounter(name string, item Counter) {
 	m.CounterMap[name] = m.CounterMap[name] + item
+
 }
 
 func (m *MemStorage) AddGaugeAsString(name string, item string) error {

@@ -4,7 +4,7 @@ type Gauge = float64
 type Counter = int64
 
 type Storage interface {
-	Init()
+	New()
 	AddGaugeAsString(key string, value string) error
 	AddGauge(key string, value Gauge)
 	GetGauge(key string) (Gauge, bool)
