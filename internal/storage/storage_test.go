@@ -23,7 +23,7 @@ func TestStorage_Positive_AddGauge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var st Storage = &MemStorage{}
-			st.Init()
+			st.New()
 
 			if err := st.AddGaugeAsString(tt.args.name, tt.args.item); err != tt.wantErr {
 				t.Errorf("AddGauge() error = %v, wantErr %v", err, tt.wantErr)
@@ -51,7 +51,7 @@ func TestStorage_Negative_AddGauge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var st Storage = &MemStorage{}
-			st.Init()
+			st.New()
 			if err := st.AddGaugeAsString(tt.args.name, tt.args.item); err == tt.wantErr {
 				t.Errorf("AddGauge() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -78,7 +78,7 @@ func TestStorage_Positive_AddCounter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var st Storage = &MemStorage{}
-			st.Init()
+			st.New()
 			if err := st.AddCounterAsString(tt.args.name, tt.args.item); err != tt.wantErr {
 				t.Errorf("AddCounter() error = %v, dontWantErr %v", err, tt.wantErr)
 			}
@@ -110,7 +110,7 @@ func TestStorage_Negative_AddCounter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var st Storage = &MemStorage{}
-			st.Init()
+			st.New()
 			if err := st.AddCounterAsString(tt.args.name, tt.args.item); err == tt.dontWantErr {
 				t.Errorf("AddCounter() error = %v, dontWantErr %v", err, tt.dontWantErr)
 			}
@@ -134,7 +134,7 @@ func TestStorage_Positive_GetAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var st Storage = &MemStorage{}
-			st.Init()
+			st.New()
 			st.AddCounterAsString("test", "12")
 			st.AddGaugeAsString("test", "12.1")
 			gres, cres := st.GetAllMetricNames()
