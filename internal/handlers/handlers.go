@@ -37,7 +37,7 @@ func UpdateJSON(st storage.Storage) gin.HandlerFunc {
 			}
 			switch metrics.MType {
 			case "gauge":
-				//fmt.Printf("%f", metrics.Value)
+				fmt.Printf("%f", *metrics.Value)
 				st.AddGauge(metrics.ID, *metrics.Value)
 				g, e := st.GetGauge(metrics.ID)
 				if !e {
@@ -51,6 +51,7 @@ func UpdateJSON(st storage.Storage) gin.HandlerFunc {
 				}
 
 			case "counter":
+				fmt.Printf("%f", *metrics.Delta)
 				st.AddCounter(metrics.ID, *metrics.Delta)
 				g, e := st.GetCounter(metrics.ID)
 				if !e {
