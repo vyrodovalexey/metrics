@@ -168,7 +168,6 @@ func main() {
 
 	go ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
-		time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
@@ -196,6 +195,7 @@ func main() {
 
 					SendMetricPlain(*client, r)
 				}
+				time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 			}
 		}
 	}
