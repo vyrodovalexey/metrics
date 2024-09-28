@@ -16,10 +16,12 @@ import (
 )
 
 const (
-	serverAddr            = "localhost:8080"
-	defaultReportInterval = 10
-	defaultPoolInterval   = 2
-	sendjson              = true
+	serverAddr                = "localhost:8080"
+	defaultReportInterval     = 10
+	defaultPoolInterval       = 2
+	sendjson                  = true
+	maxIdleConnectionsPerHost = 10
+	reconnectTimeout          = 10
 )
 
 type Config struct {
@@ -65,6 +67,17 @@ type metrics struct {
 	TotalAlloc    storage.Gauge
 	RandomValue   storage.Gauge
 	PollCount     storage.Counter
+}
+
+func httpClient() *http.Client {
+	client := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: maxIdleConnectionsPerHost,
+		},
+		Timeout: reconnectTimeout * time.Second,
+	}
+
+	return client
 }
 
 func SendMetricPlain(cl http.Client, url string) {
@@ -159,7 +172,7 @@ func main() {
 		flag.IntVar(&cfg.PoolInterval, "p", defaultPoolInterval, "seconds delay between scribing metrics from host")
 	}
 	flag.Parse()
-	client := &http.Client{}
+	client := httpClient()
 	m := metrics{}
 	// variable for setup
 	var metrict string
@@ -168,7 +181,7 @@ func main() {
 
 	go ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
-
+		time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
