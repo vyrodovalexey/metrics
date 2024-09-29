@@ -1,10 +1,13 @@
 package storage
 
+import "os"
+
 type Gauge = float64
 type Counter = int64
 
 type Storage interface {
 	New()
+	Load(f *os.File) error
 	AddGaugeAsString(key string, value string) error
 	AddGauge(key string, value Gauge)
 	GetGauge(key string) (Gauge, bool)
@@ -12,4 +15,5 @@ type Storage interface {
 	AddCounter(key string, value Counter)
 	GetCounter(key string) (Counter, bool)
 	GetAllMetricNames() (map[string]string, map[string]string)
+	Save(f *os.File, interval int)
 }

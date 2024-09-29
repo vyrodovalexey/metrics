@@ -2,27 +2,33 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"log"
+	"os"
 	"time"
 )
 
 const (
-	serverAddr = ":8080"
+	defaultListenAddr    = ":8080"
+	defaultStoreInterval = 300
+	defaultFileStorePath = "storage.json"
+	defaultRestore       = true
 )
 
 type Config struct {
-	ListenAddr string `env:"ADDRESS"`
+	ListenAddr    string `env:"ADDRESS"`
+	StoreInterval int    `env:"STORE_INTERVAL"`
+	FileStorePath string `env:"FILE_STORAGE_PATH"`
+	Restore       bool   `env:"RESTORE"`
 }
 
 func main() {
 
 	var st storage.Storage = &storage.MemStorage{}
-
-	st.New()
 
 	loggerConfig := zap.NewProductionConfig()
 	loggerConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
@@ -44,12 +50,35 @@ func main() {
 		log.Fatalf("can't parse config: %v", err)
 	}
 	if len(cfg.ListenAddr) == 0 {
-		flag.StringVar(&cfg.ListenAddr, "a", serverAddr, "input ip:port to listen")
-		flag.Parse()
+		flag.StringVar(&cfg.ListenAddr, "a", defaultListenAddr, "input ip:port to listen")
 	}
+	if cfg.StoreInterval < 1 {
+		flag.IntVar(&cfg.StoreInterval, "i", defaultStoreInterval, "seconds delay between save data to file ")
+	}
+	if len(cfg.FileStorePath) == 0 {
+		flag.StringVar(&cfg.FileStorePath, "f", defaultFileStorePath, "path to file")
+	}
+	if cfg.Restore {
+		flag.BoolVar(&cfg.Restore, "r", defaultRestore, "restore date on load")
+	}
+	flag.Parse()
+
+	file, ferr := os.OpenFile(cfg.FileStorePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if ferr != nil {
+		fmt.Println("Error creating file:", ferr)
+		return
+	}
+
+	if cfg.Restore {
+		st.Load(file)
+	} else {
+		st.New()
+	}
+
+	go st.Save(file, cfg.StoreInterval)
 
 	r := SetupRouter(st, sugarLog)
 	r.LoadHTMLGlob("templates/*")
 	r.Run(cfg.ListenAddr)
-
+	defer file.Close()
 }

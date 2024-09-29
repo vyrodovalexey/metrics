@@ -1,8 +1,12 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"strconv"
+	"time"
 )
 
 type MemStorage struct {
@@ -84,4 +88,41 @@ func (m *MemStorage) GetCounter(name string) (Counter, bool) {
 		return res, e
 	}
 	return 0, false
+}
+
+func (m *MemStorage) Load(f *os.File) error {
+	m.New()
+	// Read the file's content
+	byteValue, err := io.ReadAll(f)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+
+	}
+
+	// Unmarshal the JSON data into the struct
+	err = json.Unmarshal(byteValue, m)
+	if err != nil {
+		fmt.Println("Error parsing JSON:", err)
+	}
+	return err
+}
+
+func (m *MemStorage) Save(f *os.File, interval int) {
+
+	for {
+		mst, err := json.Marshal(m)
+
+		if err != nil {
+			fmt.Println("Error move to json:", err)
+
+		}
+		err = f.Truncate(0)
+		_, err = f.Seek(0, 0)
+		_, err = f.Write(mst)
+		if err != nil {
+			fmt.Println("Error writing to file:", err)
+
+		}
+		time.Sleep(time.Duration(interval) * time.Second)
+	}
 }
