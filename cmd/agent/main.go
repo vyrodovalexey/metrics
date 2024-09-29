@@ -19,7 +19,7 @@ const (
 	serverAddr                = "localhost:8080"
 	defaultReportInterval     = 10
 	defaultPoolInterval       = 2
-	sendJson                  = true
+	sendJSON                  = true
 	maxIdleConnectionsPerHost = 10
 	reconnectTimeout          = 5
 	maxRetries                = 5
@@ -209,7 +209,7 @@ func main() {
 					sfloat := val.Field(i).Float()
 					met.Value = &sfloat
 				}
-				if sendJson {
+				if sendJSON {
 					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
 					SendMetricJSON(r, &met)
 				} else {
