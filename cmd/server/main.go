@@ -70,7 +70,7 @@ func main() {
 		"Store interval in sec", cfg.StoreInterval,
 	)
 
-	file, ferr := os.OpenFile(cfg.FileStorePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	file, ferr := os.OpenFile(cfg.FileStorePath, os.O_RDWR|os.O_CREATE, 0666)
 	if ferr != nil {
 		sugarLog.Infow("Error creating file:",
 			"error", ferr,

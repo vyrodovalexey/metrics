@@ -97,10 +97,10 @@ func (m *MemStorage) Load(f *os.File) error {
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 	}
-
 	if len(byteValue) > 0 {
 		// Unmarshal the JSON data into the struct
 		err = json.Unmarshal(byteValue, m)
+		fmt.Println(m)
 		if err != nil {
 			fmt.Println("Error parsing JSON:", err)
 		}
@@ -143,7 +143,13 @@ func (m *MemStorage) Save(f *os.File) {
 
 	}
 	err = f.Truncate(0)
+	if err != nil {
+		fmt.Println("Can't truncate file error:", err)
+	}
 	_, err = f.Seek(0, 0)
+	if err != nil {
+		fmt.Println("Can't seek on start error:", err)
+	}
 	_, err = f.Write(mst)
 	if err != nil {
 		fmt.Println("Error writing to file:", err)
