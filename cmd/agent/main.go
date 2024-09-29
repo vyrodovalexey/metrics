@@ -19,9 +19,10 @@ const (
 	serverAddr                = "localhost:8080"
 	defaultReportInterval     = 10
 	defaultPoolInterval       = 2
-	sendjson                  = true
+	sendJson                  = true
 	maxIdleConnectionsPerHost = 10
-	reconnectTimeout          = 10
+	reconnectTimeout          = 5
+	maxRetries                = 5
 )
 
 type Config struct {
@@ -80,7 +81,8 @@ func httpClient() *http.Client {
 	return client
 }
 
-func SendMetricPlain(cl http.Client, url string) {
+func SendMetricPlain(url string) {
+	cl := httpClient()
 	req, errr := http.NewRequest("POST", url, nil)
 	if errr != nil {
 		log.Fatal(errr)
@@ -95,20 +97,28 @@ func SendMetricPlain(cl http.Client, url string) {
 	defer resp.Body.Close()
 }
 
-func SendMetricJSON(cl http.Client, url string, m *Metrics) {
+func SendMetricJSON(url string, m *Metrics) {
+	cl := httpClient()
 	jm, _ := json.Marshal(*m)
-	req, errr := http.NewRequest("POST", url, bytes.NewBuffer(jm))
-	if errr != nil {
-		log.Fatal(errr)
-	}
-	req.Header.Set("Content-Type", "application/json")
+	for i := 0; i <= maxRetries; i++ {
+		req, errr := http.NewRequest("POST", url, bytes.NewBuffer(jm))
+		if errr != nil {
+			log.Println(errr)
+		}
+		req.Header.Set("Content-Type", "application/json")
 
-	resp, err := cl.Do(req)
-	if err != nil {
-		log.Fatal(err)
+		// Attempt the request
+		resp, err := cl.Do(req)
+		if err == nil {
+			fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
+			defer resp.Body.Close()
+			break // Successful request, exit retry loop
+		}
+
+		time.Sleep(reconnectTimeout * time.Second)
+
 	}
-	fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
-	defer resp.Body.Close()
+
 }
 
 func ScribeMetrics(m *metrics, p time.Duration, stop int64) {
@@ -172,7 +182,7 @@ func main() {
 		flag.IntVar(&cfg.PoolInterval, "p", defaultPoolInterval, "seconds delay between scribing metrics from host")
 	}
 	flag.Parse()
-	client := httpClient()
+	//client := httpClient()
 	m := metrics{}
 	// variable for setup
 	var metrict string
@@ -181,7 +191,6 @@ func main() {
 
 	go ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
-		time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
@@ -200,16 +209,16 @@ func main() {
 					sfloat := val.Field(i).Float()
 					met.Value = &sfloat
 				}
-				if sendjson {
+				if sendJson {
 					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
-					SendMetricJSON(*client, r, &met)
+					SendMetricJSON(r, &met)
 				} else {
 					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metrict, typ.Field(i).Name, val.Field(i))
 
-					SendMetricPlain(*client, r)
+					SendMetricPlain(r)
 				}
-				time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 			}
+			time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 		}
 	}
 }
