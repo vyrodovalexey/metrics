@@ -15,5 +15,6 @@ type Storage interface {
 	AddCounter(key string, value Counter)
 	GetCounter(key string) (Counter, bool)
 	GetAllMetricNames() (map[string]string, map[string]string)
-	Save(f *os.File, interval int)
+	SaveAsync(f *os.File, interval int)
+	Save(f *os.File)
 }

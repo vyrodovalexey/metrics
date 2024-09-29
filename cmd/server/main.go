@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"go.uber.org/zap"
@@ -47,7 +46,8 @@ func main() {
 	err := env.Parse(&cfg)
 
 	if err != nil {
-		log.Fatalf("can't parse config: %v", err)
+
+		sugarLog.DPanicf("can't parse config: %v", err)
 	}
 	if len(cfg.ListenAddr) == 0 {
 		flag.StringVar(&cfg.ListenAddr, "a", defaultListenAddr, "input ip:port to listen")
@@ -58,14 +58,23 @@ func main() {
 	if len(cfg.FileStorePath) == 0 {
 		flag.StringVar(&cfg.FileStorePath, "f", defaultFileStorePath, "path to file")
 	}
-	if cfg.Restore {
+	if !cfg.Restore {
 		flag.BoolVar(&cfg.Restore, "r", defaultRestore, "restore date on load")
 	}
 	flag.Parse()
 
+	sugarLog.Infow("Server starting with",
+		"address", cfg.ListenAddr,
+		"File store path", cfg.FileStorePath,
+		"Load file true/false", cfg.Restore,
+		"Store interval in sec", cfg.StoreInterval,
+	)
+
 	file, ferr := os.OpenFile(cfg.FileStorePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if ferr != nil {
-		fmt.Println("Error creating file:", ferr)
+		sugarLog.Infow("Error creating file:",
+			"error", ferr,
+		)
 		return
 	}
 
@@ -75,10 +84,12 @@ func main() {
 		st.New()
 	}
 
-	go st.Save(file, cfg.StoreInterval)
-
+	if cfg.StoreInterval > 0 {
+		go st.SaveAsync(file, cfg.StoreInterval)
+	}
 	r := SetupRouter(st, sugarLog)
 	r.LoadHTMLGlob("templates/*")
 	r.Run(cfg.ListenAddr)
+	st.Save(file)
 	defer file.Close()
 }

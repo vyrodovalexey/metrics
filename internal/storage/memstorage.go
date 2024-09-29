@@ -96,18 +96,19 @@ func (m *MemStorage) Load(f *os.File) error {
 	byteValue, err := io.ReadAll(f)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
-
 	}
 
-	// Unmarshal the JSON data into the struct
-	err = json.Unmarshal(byteValue, m)
-	if err != nil {
-		fmt.Println("Error parsing JSON:", err)
+	if len(byteValue) > 0 {
+		// Unmarshal the JSON data into the struct
+		err = json.Unmarshal(byteValue, m)
+		if err != nil {
+			fmt.Println("Error parsing JSON:", err)
+		}
 	}
 	return err
 }
 
-func (m *MemStorage) Save(f *os.File, interval int) {
+func (m *MemStorage) SaveAsync(f *os.File, interval int) {
 
 	for {
 		mst, err := json.Marshal(m)
@@ -117,7 +118,13 @@ func (m *MemStorage) Save(f *os.File, interval int) {
 
 		}
 		err = f.Truncate(0)
+		if err != nil {
+			fmt.Println("Can't truncate file error:", err)
+		}
 		_, err = f.Seek(0, 0)
+		if err != nil {
+			fmt.Println("Can't seek on start error:", err)
+		}
 		_, err = f.Write(mst)
 		if err != nil {
 			fmt.Println("Error writing to file:", err)
@@ -125,4 +132,22 @@ func (m *MemStorage) Save(f *os.File, interval int) {
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
+}
+
+func (m *MemStorage) Save(f *os.File) {
+
+	mst, err := json.Marshal(m)
+
+	if err != nil {
+		fmt.Println("Error move to json:", err)
+
+	}
+	err = f.Truncate(0)
+	_, err = f.Seek(0, 0)
+	_, err = f.Write(mst)
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+
+	}
+
 }
