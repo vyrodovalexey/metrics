@@ -21,9 +21,16 @@ func TestRequest(t *testing.T) {
 	cfg := config.New()
 	// Парсим настройки конфигурации
 	ConfigParser(cfg)
+	var awf bool
+	if cfg.StoreInterval > 0 {
+		awf = false
+	} else {
+		awf = true
+	}
+
 	file, _ := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
 
-	router := SetupRouter(&mst, file, sugar)
+	router := SetupRouter(&mst, file, sugar, awf)
 	router.LoadHTMLGlob("../../templates/*")
 	tests := []struct {
 		name           string
