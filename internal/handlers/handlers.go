@@ -4,16 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/vyrodovalexey/metrics/internal/model"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"net/http"
 )
-
-type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
-}
 
 const (
 	badrequest = "Bad Request"
@@ -27,7 +21,7 @@ func UpdateJSON(st storage.Storage) gin.HandlerFunc {
 			})
 			return
 		} else {
-			var metrics Metrics
+			var metrics model.Metrics
 			err := json.NewDecoder(c.Request.Body).Decode(&metrics)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -35,6 +29,7 @@ func UpdateJSON(st storage.Storage) gin.HandlerFunc {
 				})
 				return
 			}
+			
 			switch metrics.MType {
 			case "gauge":
 				st.AddGauge(metrics.ID, *metrics.Value)
@@ -143,7 +138,7 @@ func GetJSON(st storage.Storage) gin.HandlerFunc {
 			})
 			return
 		} else {
-			var metrics Metrics
+			var metrics model.Metrics
 			err := json.NewDecoder(c.Request.Body).Decode(&metrics)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{

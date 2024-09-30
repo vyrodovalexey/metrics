@@ -19,7 +19,7 @@ func ConfigParser(cfg *config.Config) {
 	flag.BoolVar(&cfg.Restore, "r", cfg.Restore, "restore date on load")
 	flag.Parse() // Парсим флаги командной строки
 
-	// Парсим переменные окружения и сохраняем их в конфигурацию
+	// Парсим переменные окружения и сохраняем их в конфигурацию и перезаписывая существующие
 	err := env.Parse(cfg)
 
 	if err != nil {

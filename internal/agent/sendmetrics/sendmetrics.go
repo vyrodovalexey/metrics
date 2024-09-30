@@ -11,62 +11,63 @@ import (
 	"time"
 )
 
-type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
-}
-
+// SendAsPlain Отправка запроса в формате plaintext
 func SendAsPlain(cl *http.Client, url string) {
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) // Ошибка при создании запроса
 	}
+	// Установка типа контента запроса
 	req.Header.Set("Content-Type", "text/plain")
 
-	resp, errr := cl.Do(req)
+	resp, errr := cl.Do(req) // Отправка запроса
 
 	if errr == nil {
 		defer resp.Body.Close()
+
+		// Вывод статуса запроса
 		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
 	}
 }
 
+// SendAsJSON Отправка запроса в формате JSON
 func SendAsJSON(cl *http.Client, url string, m *Metrics) {
 	jm, _ := json.Marshal(*m)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jm))
 	if err != nil {
-		log.Println(err)
+		log.Println(err) // Ошибка при создании запроса
 	}
+	// Установка типа контента запроса и кодировок
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
 	req.Header.Set("Content-Encoding", "gzip")
-	// Attempt the request
+	// Пытаемся отправить запрос
 	resp, errr := cl.Do(req)
 	if errr == nil {
 		defer resp.Body.Close()
+		// Вывод статуса запроса
 		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
 		var reader io.ReadCloser
 		switch resp.Header.Get("Content-Encoding") {
 		case "gzip":
-			// Handle GZIP-encoded response
+			// Обработка ответа, кодированного GZIP
 			reader, err = gzip.NewReader(resp.Body)
 			if err != nil {
-				log.Printf("failed to create gzip reader: %v", err)
+				log.Printf("failed to create gzip reader: %v", err) // Ошибка при создании читателя GZIP
 			}
 			defer reader.Close()
 		default:
-			// Response is not gzipped, use the response body as is
+			// Ответ не кодирован GZIP, используем тело запроса как есть
 			reader = resp.Body
 		}
-		body, err := io.ReadAll(reader)
+		body, err := io.ReadAll(reader) // Чтение тела ответа
 		if err != nil {
+			// Ошибка при чтении тела ответа
 			fmt.Printf("Error reading response body: %v", err)
 			return
 		}
 
-		// Print the response body
+		// Вывод тела ответа
 		log.Println(string(body))
 	}
 }

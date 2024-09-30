@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/agent/config"
 	"github.com/vyrodovalexey/metrics/internal/agent/sendmetrics"
+	"github.com/vyrodovalexey/metrics/internal/model"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"math/rand"
 	"net/http"
@@ -13,56 +14,61 @@ import (
 )
 
 const (
-	maxIdleConnectionsPerHost = 10
-	requestTimeout            = 30
-	sendJSON                  = true
+	maxIdleConnectionsPerHost = 10   // Максимальное количество неактивных соединений на хост
+	requestTimeout            = 30   // Таймаут запроса в секундах
+	sendJSON                  = true // Флаг для отправки данных в формате JSON
 )
 
+// Структура для сбора метрик
 type metrics struct {
-	Alloc         storage.Gauge
-	BuckHashSys   storage.Gauge
-	Frees         storage.Gauge
-	GCCPUFraction storage.Gauge
-	GCSys         storage.Gauge
-	HeapAlloc     storage.Gauge
-	HeapIdle      storage.Gauge
-	HeapInuse     storage.Gauge
-	HeapObjects   storage.Gauge
-	HeapReleased  storage.Gauge
-	HeapSys       storage.Gauge
-	LastGC        storage.Gauge
-	Lookups       storage.Gauge
-	MCacheInuse   storage.Gauge
-	MCacheSys     storage.Gauge
-	MSpanInuse    storage.Gauge
-	MSpanSys      storage.Gauge
-	Mallocs       storage.Gauge
-	NextGC        storage.Gauge
-	NumForcedGC   storage.Gauge
-	NumGC         storage.Gauge
-	OtherSys      storage.Gauge
-	PauseTotalNs  storage.Gauge
-	StackInuse    storage.Gauge
-	StackSys      storage.Gauge
-	Sys           storage.Gauge
-	TotalAlloc    storage.Gauge
-	RandomValue   storage.Gauge
-	PollCount     storage.Counter
+	Alloc         storage.Gauge   // Объем выделенной памяти
+	BuckHashSys   storage.Gauge   // Память, используемая для BuckHash
+	Frees         storage.Gauge   // Количество освобожденной памяти
+	GCCPUFraction storage.Gauge   // Доля CPU, используемая сборщиком мусора
+	GCSys         storage.Gauge   // Память, используемая сборщиком мусора
+	HeapAlloc     storage.Gauge   // Объем выделенной кучи
+	HeapIdle      storage.Gauge   // Неиспользуемая память в куче
+	HeapInuse     storage.Gauge   // Используемая память в куче
+	HeapObjects   storage.Gauge   // Количество объектов в куче
+	HeapReleased  storage.Gauge   // Освобожденная память в куче
+	HeapSys       storage.Gauge   // Общая память кучи
+	LastGC        storage.Gauge   // Время последней сборки мусора
+	Lookups       storage.Gauge   // Количество обращений к памяти
+	MCacheInuse   storage.Gauge   // Используемая память для кэша
+	MCacheSys     storage.Gauge   // Общая память для кэша
+	MSpanInuse    storage.Gauge   // Используемая память для MSpan
+	MSpanSys      storage.Gauge   // Общая память для MSpan
+	Mallocs       storage.Gauge   // Количество выделений памяти
+	NextGC        storage.Gauge   // Время до следующей сборки мусора
+	NumForcedGC   storage.Gauge   // Количество принудительных сборок мусора
+	NumGC         storage.Gauge   // Количество сборок мусора
+	OtherSys      storage.Gauge   // Другая системная память
+	PauseTotalNs  storage.Gauge   // Общее время паузы в наносекундах
+	StackInuse    storage.Gauge   // Используемая память стека
+	StackSys      storage.Gauge   // Общая память стека
+	Sys           storage.Gauge   // Общая системная память
+	TotalAlloc    storage.Gauge   // Общее количество выделенной памяти
+	RandomValue   storage.Gauge   // Случайное значение
+	PollCount     storage.Counter // Счетчик опросов
 }
 
+// Функция для создания HTTP клиента
 func httpClient() *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConnsPerHost: maxIdleConnectionsPerHost,
+			MaxIdleConnsPerHost: maxIdleConnectionsPerHost, // Устанавливаем максимальное количество неактивных соединений
 		},
-		Timeout: requestTimeout * time.Second,
+		Timeout: requestTimeout * time.Second, // Устанавливаем таймаут запроса
 	}
 
 	return client
 }
 
+// Функция для сбора метрик
 func updateMetrics(m *metrics) {
+	// Структура для хранения статистики памяти
 	var memStats runtime.MemStats
+	// Читаем статистику памяти
 	runtime.ReadMemStats(&memStats)
 	m.Alloc = float64(memStats.Alloc)
 	m.BuckHashSys = float64(memStats.BuckHashSys)
@@ -95,40 +101,47 @@ func updateMetrics(m *metrics) {
 	m.PollCount += 1
 }
 
+// Функция для проверки, нужно ли остановить опрос
 func shouldStop(counter int64, stop int64) bool {
-	if counter < stop || stop == -1 {
-		return false
+	if counter < stop || stop == -1 { // Если счетчик меньше значения остановки или значение остановки равно -1
+		return false // Не останавливаем
 	} else {
-		return true
+		return true // Останавливаем
 	}
-
 }
 
+// Функция для записи метрик
 func scribeMetrics(m *metrics, p time.Duration, stop int64) {
 
 	for {
+		// Проверяем, нужно ли остановить опрос
 		if shouldStop(m.PollCount, stop) {
 			return
 		}
+		// Собираем метрики
 		updateMetrics(m)
+		// Ждем заданный интервал времени
 		<-time.After(p * time.Second)
 	}
 }
 
 func main() {
 
-	// Создаем новый экземпляр конфигурации
+	// Инициализируем новый экземпляр конфигурации и
+	// парсим настройки конфигурации
 	cfg := config.New()
-
-	// Парсим настройки конфигурации
 	ConfigParser(cfg)
 
 	client := httpClient()
+	// Инициализируем структуру метрик
 	m := metrics{}
-
+	// Костыль - переменная для хранения типа метрики
 	var metricSetup string
-	var met sendmetrics.Metrics
 
+	// Инициализируем структуру для метрик
+	var met model.Metrics
+
+	// Запускаем горутину для сбора метрик
 	go scribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
 		if m.PollCount > 0 {
@@ -136,7 +149,7 @@ func main() {
 			typ := reflect.TypeOf(m)
 			for i := 0; i < val.NumField(); i++ {
 				met.ID = typ.Field(i).Name
-				// fucking setup to apply type
+				// Костыль - Настройка типа метрики
 				switch typ.Field(i).Name {
 				case "PollCount":
 					metricSetup = "counter"
@@ -149,12 +162,12 @@ func main() {
 					sfloat := val.Field(i).Float()
 					met.Value = &sfloat
 				}
+				// Выбираем отправку в формате JSON или plaintext
 				if sendJSON {
 					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
 					sendmetrics.SendAsJSON(client, r, &met)
 				} else {
 					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metricSetup, typ.Field(i).Name, val.Field(i))
-
 					sendmetrics.SendAsPlain(client, r)
 				}
 			}
