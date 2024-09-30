@@ -27,7 +27,7 @@ type Storage interface {
 	// GetAllMetricNames Получение списка имен метрик
 	GetAllMetricNames() (map[string]string, map[string]string)
 	// SaveAsync Асинхронная сохранение данных хранилища в файл
-	SaveAsync(f *os.File, interval int)
+	SaveAsync(f *os.File, interval uint)
 	// Save Сохранение данных хранилища в файл
 	Save(f *os.File)
 }

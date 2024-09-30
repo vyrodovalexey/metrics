@@ -7,13 +7,14 @@ import (
 	"github.com/vyrodovalexey/metrics/internal/model"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"net/http"
+	"os"
 )
 
 const (
 	badrequest = "Bad Request"
 )
 
-func UpdateJSON(st storage.Storage) gin.HandlerFunc {
+func UpdateJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Header.Get("Content-Type") != "application/json" {
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
@@ -29,10 +30,13 @@ func UpdateJSON(st storage.Storage) gin.HandlerFunc {
 				})
 				return
 			}
-			
+
 			switch metrics.MType {
 			case "gauge":
 				st.AddGauge(metrics.ID, *metrics.Value)
+				if p {
+					st.Save(f)
+				}
 				g, e := st.GetGauge(metrics.ID)
 				if !e {
 					c.JSON(http.StatusNotFound, gin.H{
@@ -46,6 +50,9 @@ func UpdateJSON(st storage.Storage) gin.HandlerFunc {
 
 			case "counter":
 				st.AddCounter(metrics.ID, *metrics.Delta)
+				if p {
+					st.Save(f)
+				}
 				g, e := st.GetCounter(metrics.ID)
 				if !e {
 					c.JSON(http.StatusNotFound, gin.H{
@@ -66,7 +73,7 @@ func UpdateJSON(st storage.Storage) gin.HandlerFunc {
 	}
 }
 
-func Update(st storage.Storage) gin.HandlerFunc {
+func Update(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		switch c.Param("type") {
@@ -77,13 +84,18 @@ func Update(st storage.Storage) gin.HandlerFunc {
 					"error": badrequest,
 				})
 			}
-
+			if p {
+				st.Save(f)
+			}
 		case "counter":
 			err := st.AddCounterAsString(c.Param("name"), c.Param("value"))
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": badrequest,
 				})
+			}
+			if p {
+				st.Save(f)
 			}
 		default:
 			c.JSON(http.StatusBadRequest, gin.H{

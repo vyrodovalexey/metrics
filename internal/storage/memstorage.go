@@ -107,7 +107,7 @@ func (m *MemStorage) Load(f *os.File) error {
 }
 
 // SaveAsync Асинхронное сохранение данных хранилища метрик в файл
-func (m *MemStorage) SaveAsync(f *os.File, interval int) {
+func (m *MemStorage) SaveAsync(f *os.File, interval uint) {
 	for {
 		mst, err := json.Marshal(m)
 		if err != nil {

@@ -10,7 +10,7 @@ const (
 // Config Структура для хранения конфигурации
 type Config struct {
 	ListenAddr      string `env:"ADDRESS"`
-	StoreInterval   int    `env:"STORE_INTERVAL"`
+	StoreInterval   uint   `env:"STORE_INTERVAL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
 }

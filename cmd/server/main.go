@@ -45,12 +45,20 @@ func main() {
 		st.New()
 	}
 
+	// Инициаоизация флага синхронной записи (AlwaysWriteFile)
+	var awf bool
+
 	// При ассинхронном режиме запускаем фоновое сохранение структуры данных
+	// и назначение переменной owf
 	if cfg.StoreInterval > 0 {
+		awf = false
 		go st.SaveAsync(file, cfg.StoreInterval)
+	} else {
+		awf = true
 	}
+
 	// Инициализируем маршрутизатор с хранилищем и логированием
-	r := SetupRouter(st, lg)
+	r := SetupRouter(st, file, lg, awf)
 	// Загружаем HTML-шаблоны из указанной директории
 	r.LoadHTMLGlob("templates/*")
 	// Запускаем HTTP-сервер на заданном адресе
