@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"github.com/vyrodovalexey/metrics/internal/model"
 	"io"
 	"log"
 	"net/http"
@@ -31,7 +32,7 @@ func SendAsPlain(cl *http.Client, url string) {
 }
 
 // SendAsJSON Отправка запроса в формате JSON
-func SendAsJSON(cl *http.Client, url string, m *Metrics) {
+func SendAsJSON(cl *http.Client, url string, m *model.Metrics) {
 	jm, _ := json.Marshal(*m)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jm))
 	if err != nil {
