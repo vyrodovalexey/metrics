@@ -26,7 +26,7 @@ func TestScribeMetrics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ScribeMetrics(tt.met, tt.pollInterval, tt.stop)
+			scribeMetrics(tt.met, tt.pollInterval, tt.stop)
 			if tt.met.PollCount != tt.wantpoolcount {
 				t.Errorf("ScribeMetrics() Pollcount = %d, WantPoolCount %d", tt.met.PollCount, tt.wantpoolcount)
 			}

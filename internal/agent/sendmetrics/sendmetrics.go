@@ -53,7 +53,7 @@ func SendAsJSON(cl *http.Client, url string, m *Metrics) {
 			// Handle GZIP-encoded response
 			reader, err = gzip.NewReader(resp.Body)
 			if err != nil {
-				log.Printf("failed to create gzip reader: %w", err)
+				log.Printf("failed to create gzip reader: %v", err)
 			}
 			defer reader.Close()
 		default:
@@ -62,7 +62,7 @@ func SendAsJSON(cl *http.Client, url string, m *Metrics) {
 		}
 		body, err := io.ReadAll(reader)
 		if err != nil {
-			fmt.Printf("Error reading response body: %w", err)
+			fmt.Printf("Error reading response body: %v", err)
 			return
 		}
 
