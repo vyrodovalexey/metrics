@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/vyrodovalexey/metrics/internal/handlers"
+	"github.com/vyrodovalexey/metrics/internal/server/logging"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"go.uber.org/zap"
 	"io"
@@ -13,7 +14,7 @@ func SetupRouter(st storage.Storage, log *zap.SugaredLogger) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DefaultWriter = io.Discard
 	router := gin.Default()
-	router.Use(LoggingMiddleware(log))
+	router.Use(logging.LoggingMiddleware(log))
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.POST("/update/:type/:name/:value", handlers.Update(st))
 	router.GET("/value/:type/:name", handlers.Get(st))

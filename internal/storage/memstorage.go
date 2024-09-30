@@ -130,7 +130,7 @@ func (m *MemStorage) SaveAsync(f *os.File, interval int) {
 			fmt.Println("Error writing to file:", err)
 
 		}
-		time.Sleep(time.Duration(interval) * time.Second)
+		<-time.After(time.Duration(interval) * time.Second)
 	}
 }
 

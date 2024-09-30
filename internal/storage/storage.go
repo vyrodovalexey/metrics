@@ -1,6 +1,8 @@
 package storage
 
-import "os"
+import (
+	"os"
+)
 
 type Gauge = float64
 type Counter = int64
