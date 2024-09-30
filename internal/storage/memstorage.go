@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -95,12 +96,12 @@ func (m *MemStorage) Load(f *os.File) error {
 	// Чтение содержимого файла
 	byteValue, err := io.ReadAll(f)
 	if err != nil {
-		fmt.Println("Error reading file:", err)
+		log.Fatalf("Error reading file: %v", err)
 	}
 	if len(byteValue) > 0 {
 		err = json.Unmarshal(byteValue, m)
 		if err != nil {
-			fmt.Println("Error parsing JSON:", err)
+			log.Fatalf("Error parsing JSON: %v", err)
 		}
 	}
 	return err
@@ -111,21 +112,21 @@ func (m *MemStorage) SaveAsync(f *os.File, interval uint) {
 	for {
 		mst, err := json.Marshal(m)
 		if err != nil {
-			fmt.Println("Error move to json:", err)
+			log.Fatalf("Error move to json: %v", err)
 		}
 
 		// Очистка файла
 		err = f.Truncate(0)
 		if err != nil {
-			fmt.Println("Can't truncate file error:", err)
+			log.Fatalf("Can't truncate file error: %v", err)
 		}
 		_, err = f.Seek(0, 0) // Перемещение курсора в начало файла
 		if err != nil {
-			fmt.Println("Can't seek on start error:", err)
+			log.Fatalf("Can't seek on start error: %v", err)
 		}
 		_, err = f.Write(mst) // Запись данных хранилища метрик в файл
 		if err != nil {
-			fmt.Println("Error writing to file:", err)
+			log.Fatalf("Error writing to file: %v", err)
 		}
 		// Интервал ожидания
 		<-time.After(time.Duration(interval) * time.Second)

@@ -30,7 +30,7 @@ func main() {
 	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		// Логируем ошибку, если открытие/создание файла не удалось
-		lg.Infow("Initializing file storage...",
+		lg.Panicw("Initializing file storage...",
 			"Error creating file:", err,
 		)
 		return
