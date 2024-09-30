@@ -12,7 +12,7 @@ func ConfigParser(cfg *config.Config) {
 	// Устанавливаем флаг для адреса прослушивания (IP:порт)
 	flag.StringVar(&cfg.ListenAddr, "a", cfg.ListenAddr, "input ip:port to listen")
 	// Устанавливаем флаг для интервала сохранения данных в секундах
-	flag.IntVar(&cfg.StoreInterval, "i", cfg.StoreInterval, "seconds delay between save data to file ")
+	flag.UintVar(&cfg.StoreInterval, "i", cfg.StoreInterval, "seconds delay between save data to file ")
 	// Устанавливаем флаг для пути к файлу хранения
 	flag.StringVar(&cfg.FileStoragePath, "f", cfg.FileStoragePath, "path to file")
 	// Устанавливаем флаг для восстановления данных при загрузке
