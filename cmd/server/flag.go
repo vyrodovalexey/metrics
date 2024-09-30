@@ -24,7 +24,7 @@ func ConfigParser(cfg *config.Config) {
 
 	if err != nil {
 		// Логируем ошибку, если не удалось распарсить переменные окружения
-		log.Fatal("can't parse ENV: %v", err)
+		log.Fatalf("can't parse ENV: %v", err)
 	}
 
 }
