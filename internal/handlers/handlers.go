@@ -13,55 +13,70 @@ const (
 	badrequest = "Bad Request"
 )
 
+// UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.
 func UpdateFromBodyJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get("Content-Type") != "application/json" {
+			// Если нет, возвращаем ошибку 415 Unsupported Media Type
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
 			})
 			return
 		} else {
+			// Создаем новую пустую метрику
 			m := &model.Metrics{}
+			// Получаем тело запроса
 			body := c.Request.Body
+			// Парсим тело запроса в структуру Metrics
 			err := m.BodyToMetric(&body)
+			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": badrequest,
 				})
 				return
 			}
+			// Обновляем метрику в хранилище
 			err = st.UpdateMetric(m, f, p)
+			// Если произошла ошибка при обновлении, возвращаем ошибку 500 Internal Server Error
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": err,
 				})
 				return
 			}
+			// Получаем обновленную метрику из хранилища
 			st.GetMetric(m)
+			// Возвращаем обновленную метрику клиенту с кодом 200 OK
 			c.JSON(http.StatusOK, m)
 			return
 		}
 	}
 }
 
+// UpdateFromURLPath обновляет метрику из параметров URL.
 func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Создаем новую пустую метрику
 		m := &model.Metrics{}
+		// Парсим параметры URL в структуру Metrics
 		err := m.URLPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
+		// Если произошла ошибка при парсинге, возвращаем ошибку 404 Not Found
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err,
-			})
+			c.String(http.StatusNotFound, badrequest)
 			return
 		}
+		// Обновляем метрику в хранилище
 		err = st.UpdateMetric(m, f, p)
+		// Если произошла ошибка при обновлении, возвращаем ошибку 404 Not Found
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err,
-			})
+			c.String(http.StatusNotFound, badrequest)
 			return
 		}
+		// Получаем обновленную метрику из хранилища
 		st.GetMetric(m)
+		// Возвращаем обновленную метрику клиенту с кодом 200 OK
 		if m.MType == "gauge" {
 			c.String(http.StatusOK, fmt.Sprintf("%v", *m.Value))
 		} else {
@@ -70,23 +85,26 @@ func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	}
 }
 
+// Get возвращает метрику по ее имени.
 func Get(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Создаем новую пустую метрику
 		m := &model.Metrics{}
+		// Парсим параметры URL в структуру Metrics
 		err := m.URLPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
+		// Если произошла ошибка при парсинге, возвращаем ошибку 404 Not Found
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err,
-			})
+			c.String(http.StatusNotFound, badrequest)
 			return
 		}
+		// Получаем метрику из хранилища
 		b := st.GetMetric(m)
+		// Если метрика не найдена, возвращаем ошибку 404 Not Found
 		if !b {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": badrequest,
-			})
+			c.String(http.StatusNotFound, badrequest)
 			return
 		}
+		// Возвращаем метрику клиенту с кодом 200 OK
 		if m.MType == "gauge" {
 			c.String(http.StatusOK, fmt.Sprintf("%v", *m.Value))
 		} else {
@@ -95,41 +113,52 @@ func Get(st storage.Storage) gin.HandlerFunc {
 	}
 }
 
+// GetBodyJSON возвращает метрику из тела запроса в формате JSON.
 func GetBodyJSON(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get("Content-Type") != "application/json" {
+			// Если нет, возвращаем ошибку 415 Unsupported Media Type
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
 			})
 			return
 		} else {
+			// Создаем новую пустую метрику
 			m := &model.Metrics{}
+			// Получаем тело запроса
 			body := c.Request.Body
+			// Парсим тело запроса в структуру Metrics
 			err := m.BodyToMetric(&body)
+			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": badrequest,
 				})
 				return
 			}
+			// Получаем метрику из хранилища
 			b := st.GetMetric(m)
+			// Если метрика не найдена, возвращаем ошибку 404 Not Found
 			if !b {
 				c.JSON(http.StatusNotFound, gin.H{
 					"error": badrequest,
 				})
 				return
 			}
+			// Возвращаем метрику клиенту с кодом 200 OK
 			c.JSON(http.StatusOK, m)
 			return
 		}
 	}
 }
 
+// GetAllKeys возвращает все ключи метрик.
 func GetAllKeys(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+		// Получаем все ключи метрик из хранилища
 		gval, cval := st.GetAllMetricNames()
+		// Возвращаем ключи метрик клиенту с кодом 200 OK
 		c.HTML(200, "table.tmpl", gin.H{
 			"Title":         "Metric Names",
 			"GaugeValues":   gval,

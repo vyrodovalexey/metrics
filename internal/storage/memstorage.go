@@ -42,6 +42,7 @@ func (m *MemStorage) UpdateGauge(name string, item Gauge, f *os.File, p bool) er
 	return err
 }
 
+// UpdateMetric Добавление метрики в формате model.Metrics
 func (m *MemStorage) UpdateMetric(metrics *model.Metrics, f *os.File, p bool) error {
 	var err error
 	if metrics.MType == "counter" {
@@ -54,6 +55,7 @@ func (m *MemStorage) UpdateMetric(metrics *model.Metrics, f *os.File, p bool) er
 	return err
 }
 
+// GetMetric Получение метрики в формате model.Metrics
 func (m *MemStorage) GetMetric(metrics *model.Metrics) bool {
 
 	if metrics.MType == "counter" {
