@@ -67,8 +67,6 @@ func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 		} else {
 			c.String(http.StatusOK, fmt.Sprintf("%d", *m.Delta))
 		}
-		return
-
 	}
 }
 
@@ -94,7 +92,6 @@ func Get(st storage.Storage) gin.HandlerFunc {
 		} else {
 			c.String(http.StatusOK, fmt.Sprintf("%d", *m.Delta))
 		}
-		return
 	}
 }
 
