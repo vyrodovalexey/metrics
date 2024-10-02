@@ -40,7 +40,14 @@ func main() {
 	// Проверяем, нужно ли загружать файл харнилища
 	// Если нет, инициализируем новое
 	if cfg.Restore {
-		st.Load(file)
+		err = st.Load(file)
+		if err != nil {
+			// Логируем ошибку, если открытие/создание файла не удалось
+			lg.Panicw("Initializing file storage...",
+				"Error load data from file:", err,
+			)
+			return
+		}
 	} else {
 		st.New()
 	}
@@ -64,6 +71,13 @@ func main() {
 	// Запускаем HTTP-сервер на заданном адресе
 	r.Run(cfg.ListenAddr)
 	// Сохраняем текущую структуру данных в файловое хранилище
-	st.Save(file)
+	err = st.Save(file)
+	if err != nil {
+		// Логируем ошибку, если открытие/создание файла не удалось
+		lg.Panicw("Saving data...",
+			"Error saving data:", err,
+		)
+		return
+	}
 	defer file.Close()
 }

@@ -3,10 +3,10 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/vyrodovalexey/metrics/internal/model"
 	"io"
 	"log"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -22,32 +22,53 @@ func (m *MemStorage) New() {
 	m.CounterMap = make(map[string]Counter)
 }
 
-// AddCounterAsString Добавление метрики Counter из строки
-func (m *MemStorage) AddCounterAsString(name string, item string) error {
-	counter, err := strconv.ParseInt(item, 10, 64)
-	if err == nil {
-		m.CounterMap[name] = m.CounterMap[name] + counter // Увеличение значения счетчика
-	}
-	return err
-}
-
-// AddCounter Добавление метрики Counter
-func (m *MemStorage) AddCounter(name string, item Counter) {
+// UpdateCounter Добавление метрики Counter
+func (m *MemStorage) UpdateCounter(name string, item Counter, f *os.File, p bool) error {
+	var err error
 	m.CounterMap[name] = m.CounterMap[name] + item // Увеличение значения счетчика
-}
-
-// AddGaugeAsString Добавление метрики Gauge из строки
-func (m *MemStorage) AddGaugeAsString(name string, item string) error {
-	gauge, err := strconv.ParseFloat(item, 64) // Парсинг строки в вещественное число
-	if err == nil {
-		m.GaugeMap[name] = gauge
+	if p {
+		err = m.Save(f)
 	}
 	return err
 }
 
-// AddGauge Добавление метрики Gauge
-func (m *MemStorage) AddGauge(name string, item Gauge) {
+// UpdateGauge Добавление метрики Gauge
+func (m *MemStorage) UpdateGauge(name string, item Gauge, f *os.File, p bool) error {
+	var err error
 	m.GaugeMap[name] = item
+	if p {
+		err = m.Save(f)
+	}
+	return err
+}
+
+func (m *MemStorage) UpdateMetric(metrics *model.Metrics, f *os.File, p bool) error {
+	var err error
+	if metrics.MType == "counter" {
+		err = m.UpdateCounter(metrics.ID, *metrics.Delta, f, p)
+	}
+	if metrics.MType == "gauge" {
+		err = m.UpdateGauge(metrics.ID, *metrics.Value, f, p)
+
+	}
+	return err
+}
+
+func (m *MemStorage) GetMetric(metrics *model.Metrics) bool {
+
+	if metrics.MType == "counter" {
+		i, b := m.GetCounter(metrics.ID)
+		metrics.Delta = &i
+		metrics.Value = nil
+		return b
+	}
+	if metrics.MType == "gauge" {
+		g, b := m.GetGauge(metrics.ID)
+		metrics.Value = &g
+		metrics.Delta = nil
+		return b
+	}
+	return false
 }
 
 // GetAllMetricNames Получение полного списка имен метрик
@@ -92,19 +113,21 @@ func (m *MemStorage) GetCounter(name string) (Counter, bool) {
 
 // Load Загрузка данных хранилища метрик из файла
 func (m *MemStorage) Load(f *os.File) error {
+	var err error
+	var byteValue []byte
 	m.New() // Создание нового хранилища
 	// Чтение содержимого файла
-	byteValue, err := io.ReadAll(f)
+	byteValue, err = io.ReadAll(f)
 	if err != nil {
-		log.Fatalf("Error reading file: %v", err)
+		return err
 	}
 	if len(byteValue) > 0 {
 		err = json.Unmarshal(byteValue, m)
 		if err != nil {
-			log.Fatalf("Error parsing JSON: %v", err)
+			return err
 		}
 	}
-	return err
+	return nil
 }
 
 // SaveAsync Асинхронное сохранение данных хранилища метрик в файл
@@ -134,22 +157,25 @@ func (m *MemStorage) SaveAsync(f *os.File, interval uint) {
 }
 
 // Save Сохранение хранилища в файл
-func (m *MemStorage) Save(f *os.File) {
-	mst, err := json.Marshal(m)
+func (m *MemStorage) Save(f *os.File) error {
+	var err error
+	var mst []byte
+	mst, err = json.Marshal(m)
 	if err != nil {
-		fmt.Println("Error move to json:", err)
+		return err
 	}
 	// Очистка файла
 	err = f.Truncate(0)
 	if err != nil {
-		fmt.Println("Can't truncate file error:", err)
+		return err
 	}
 	_, err = f.Seek(0, 0) // Перемещение курсора в начало файла
 	if err != nil {
-		fmt.Println("Can't seek on start error:", err)
+		return err
 	}
 	_, err = f.Write(mst) // Запись данных хранилища метрик в файл
 	if err != nil {
-		fmt.Println("Error writing to file:", err)
+		return err
 	}
+	return nil
 }

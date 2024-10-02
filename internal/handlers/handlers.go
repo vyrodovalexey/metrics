@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/vyrodovalexey/metrics/internal/model"
@@ -14,7 +13,7 @@ const (
 	badrequest = "Bad Request"
 )
 
-func UpdateJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
+func UpdateFromBodyJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Header.Get("Content-Type") != "application/json" {
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
@@ -22,126 +21,80 @@ func UpdateJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 			})
 			return
 		} else {
-			var metrics model.Metrics
-			err := json.NewDecoder(c.Request.Body).Decode(&metrics)
+			m := &model.Metrics{}
+			body := c.Request.Body
+			err := m.BodyToMetric(&body)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": badrequest,
 				})
 				return
 			}
-
-			switch metrics.MType {
-			case "gauge":
-				st.AddGauge(metrics.ID, *metrics.Value)
-				if p {
-					st.Save(f)
-				}
-				g, e := st.GetGauge(metrics.ID)
-				if !e {
-					c.JSON(http.StatusNotFound, gin.H{
-						"error": badrequest,
-					})
-					return
-				} else {
-					metrics.Value = &g
-					c.JSON(http.StatusOK, metrics)
-				}
-
-			case "counter":
-				st.AddCounter(metrics.ID, *metrics.Delta)
-				if p {
-					st.Save(f)
-				}
-				g, e := st.GetCounter(metrics.ID)
-				if !e {
-					c.JSON(http.StatusNotFound, gin.H{
-						"error": badrequest,
-					})
-					return
-				} else {
-					metrics.Delta = &g
-					c.JSON(http.StatusOK, metrics)
-				}
-			default:
+			err = st.UpdateMetric(m, f, p)
+			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
-					"error": badrequest,
+					"error": err,
 				})
 				return
 			}
+			st.GetMetric(m)
+			c.JSON(http.StatusOK, m)
+			return
 		}
 	}
 }
 
-func Update(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
+func UpdateFromUrlPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		switch c.Param("type") {
-		case "gauge":
-			err := st.AddGaugeAsString(c.Param("name"), c.Param("value"))
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": badrequest,
-				})
-			}
-			if p {
-				st.Save(f)
-			}
-		case "counter":
-			err := st.AddCounterAsString(c.Param("name"), c.Param("value"))
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": badrequest,
-				})
-			}
-			if p {
-				st.Save(f)
-			}
-		default:
+		m := &model.Metrics{}
+		err := m.UrlPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": badrequest,
+				"error": err,
 			})
 			return
 		}
+		err = st.UpdateMetric(m, f, p)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err,
+			})
+			return
+		}
+		st.GetMetric(m)
+		c.String(http.StatusOK, fmt.Sprintf("%v%v", m.Value, m.Delta))
+		return
+
 	}
 }
 
 func Get(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		switch c.Param("type") {
-		case "gauge":
-			g, e := st.GetGauge(c.Param("name"))
-			if !e {
-				c.JSON(http.StatusNotFound, gin.H{
-					"error": badrequest,
-				})
-				return
-			} else {
-				gs := fmt.Sprintf("%v", g)
-				c.String(http.StatusOK, gs)
-			}
-		case "counter":
-			g, e := st.GetCounter(c.Param("name"))
-			if !e {
-				c.JSON(http.StatusNotFound, gin.H{
-					"error": badrequest,
-				})
-				return
-			} else {
-				gs := fmt.Sprintf("%v", g)
-				c.String(http.StatusOK, gs)
-			}
-		default:
+		m := &model.Metrics{}
+		err := m.UrlPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err,
+			})
+			return
+		}
+		b := st.GetMetric(m)
+		if !b {
+			c.JSON(http.StatusNotFound, gin.H{
 				"error": badrequest,
 			})
 			return
 		}
+		if m.MType == "gauge" {
+			c.String(http.StatusOK, fmt.Sprintf("%f", *m.Value))
+		} else {
+			c.String(http.StatusOK, fmt.Sprintf("%d", *m.Delta))
+		}
+		return
 	}
 }
 
-func GetJSON(st storage.Storage) gin.HandlerFunc {
+func GetBodyJSON(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if c.Request.Header.Get("Content-Type") != "application/json" {
@@ -150,43 +103,24 @@ func GetJSON(st storage.Storage) gin.HandlerFunc {
 			})
 			return
 		} else {
-			var metrics model.Metrics
-			err := json.NewDecoder(c.Request.Body).Decode(&metrics)
+			m := &model.Metrics{}
+			body := c.Request.Body
+			err := m.BodyToMetric(&body)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": badrequest,
 				})
 				return
 			}
-			switch metrics.MType {
-			case "gauge":
-				g, e := st.GetGauge(metrics.ID)
-				if !e {
-					c.JSON(http.StatusNotFound, gin.H{
-						"error": badrequest,
-					})
-					return
-				} else {
-					metrics.Value = &g
-					c.JSON(http.StatusOK, metrics)
-				}
-			case "counter":
-				g, e := st.GetCounter(metrics.ID)
-				if !e {
-					c.JSON(http.StatusNotFound, gin.H{
-						"error": badrequest,
-					})
-					return
-				} else {
-					metrics.Delta = &g
-					c.JSON(http.StatusOK, metrics)
-				}
-			default:
-				c.JSON(http.StatusBadRequest, gin.H{
+			b := st.GetMetric(m)
+			if !b {
+				c.JSON(http.StatusNotFound, gin.H{
 					"error": badrequest,
 				})
 				return
 			}
+			c.JSON(http.StatusOK, m)
+			return
 		}
 	}
 }

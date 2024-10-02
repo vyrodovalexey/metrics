@@ -19,6 +19,7 @@ func TestRequest(t *testing.T) {
 	sugar := logging.NewLogging(zap.InfoLevel)
 	// Создаем новый экземпляр конфигурации
 	cfg := config.New()
+	cfg.FileStoragePath = "/tmp/test.json"
 	// Парсим настройки конфигурации
 	ConfigParser(cfg)
 	var awf bool
@@ -28,7 +29,7 @@ func TestRequest(t *testing.T) {
 		awf = true
 	}
 
-	file, _ := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
+	file, _ := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 
 	router := SetupRouter(&mst, file, sugar, awf)
 	router.LoadHTMLGlob("../../templates/*")

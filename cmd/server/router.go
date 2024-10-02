@@ -22,10 +22,10 @@ func SetupRouter(st storage.Storage, f *os.File, log *zap.SugaredLogger, p bool)
 	// Добавление middleware для сжатия ответа
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	// Определение эндпоинтов
-	router.POST("/update/:type/:name/:value", handlers.Update(st, f, p))
+	router.POST("/update/:type/:name/:value", handlers.UpdateFromUrlPath(st, f, p))
 	router.GET("/value/:type/:name", handlers.Get(st))
-	router.POST("/update/", handlers.UpdateJSON(st, f, p))
-	router.POST("/value/", handlers.GetJSON(st))
+	router.POST("/update/", handlers.UpdateFromBodyJSON(st, f, p))
+	router.POST("/value/", handlers.GetBodyJSON(st))
 	router.GET("/", handlers.GetAllKeys(st))
 	return router
 }
