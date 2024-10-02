@@ -15,7 +15,7 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // Значение метрики в случае передачи gauge
 }
 
-func (mod *Metrics) UrlPathToMetric(mtype string, key string, value string) error {
+func (mod *Metrics) URLPathToMetric(mtype string, key string, value string) error {
 	var err error
 	var gauge float64
 	var counter int64

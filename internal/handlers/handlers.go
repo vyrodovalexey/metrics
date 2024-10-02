@@ -44,10 +44,10 @@ func UpdateFromBodyJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc 
 	}
 }
 
-func UpdateFromUrlPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
+func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		m := &model.Metrics{}
-		err := m.UrlPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
+		err := m.URLPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err,
@@ -62,7 +62,11 @@ func UpdateFromUrlPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 			return
 		}
 		st.GetMetric(m)
-		c.String(http.StatusOK, fmt.Sprintf("%v%v", m.Value, m.Delta))
+		if m.MType == "gauge" {
+			c.String(http.StatusOK, fmt.Sprintf("%v", *m.Value))
+		} else {
+			c.String(http.StatusOK, fmt.Sprintf("%d", *m.Delta))
+		}
 		return
 
 	}
@@ -71,7 +75,7 @@ func UpdateFromUrlPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 func Get(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		m := &model.Metrics{}
-		err := m.UrlPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
+		err := m.URLPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err,
@@ -86,7 +90,7 @@ func Get(st storage.Storage) gin.HandlerFunc {
 			return
 		}
 		if m.MType == "gauge" {
-			c.String(http.StatusOK, fmt.Sprintf("%f", *m.Value))
+			c.String(http.StatusOK, fmt.Sprintf("%v", *m.Value))
 		} else {
 			c.String(http.StatusOK, fmt.Sprintf("%d", *m.Delta))
 		}
