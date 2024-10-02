@@ -62,16 +62,16 @@ func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 		m := &model.Metrics{}
 		// Парсим параметры URL в структуру Metrics
 		err := m.URLPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
-		// Если произошла ошибка при парсинге, возвращаем ошибку 404 Not Found
+		// Если произошла ошибка при парсинге, возвращаем ошибку 400
 		if err != nil {
-			c.String(http.StatusNotFound, badrequest)
+			c.String(http.StatusBadRequest, badrequest)
 			return
 		}
 		// Обновляем метрику в хранилище
 		err = st.UpdateMetric(m, f, p)
-		// Если произошла ошибка при обновлении, возвращаем ошибку 404 Not Found
+		// Если произошла ошибка при обновлении, возвращаем ошибку 400
 		if err != nil {
-			c.String(http.StatusNotFound, badrequest)
+			c.String(http.StatusBadRequest, badrequest)
 			return
 		}
 		// Получаем обновленную метрику из хранилища
@@ -92,9 +92,9 @@ func Get(st storage.Storage) gin.HandlerFunc {
 		m := &model.Metrics{}
 		// Парсим параметры URL в структуру Metrics
 		err := m.URLPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
-		// Если произошла ошибка при парсинге, возвращаем ошибку 404 Not Found
+		// Если произошла ошибка при парсинге, возвращаем ошибку 400
 		if err != nil {
-			c.String(http.StatusNotFound, badrequest)
+			c.String(http.StatusBadRequest, badrequest)
 			return
 		}
 		// Получаем метрику из хранилища
