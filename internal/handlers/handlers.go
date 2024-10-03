@@ -1,193 +1,164 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/vyrodovalexey/metrics/internal/model"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"net/http"
+	"os"
 )
-
-type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
-}
 
 const (
 	badrequest = "Bad Request"
 )
 
-func UpdateJSON(st storage.Storage) gin.HandlerFunc {
+// UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.
+func UpdateFromBodyJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get("Content-Type") != "application/json" {
+			// Если нет, возвращаем ошибку 415 Unsupported Media Type
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
 			})
 			return
 		} else {
-			var metrics Metrics
-			err := json.NewDecoder(c.Request.Body).Decode(&metrics)
+			// Создаем новую пустую метрику
+			m := &model.Metrics{}
+			// Получаем тело запроса
+			body := c.Request.Body
+			// Парсим тело запроса в структуру Metrics
+			err := m.BodyToMetric(&body)
+			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": badrequest,
 				})
 				return
 			}
-			switch metrics.MType {
-			case "gauge":
-				st.AddGauge(metrics.ID, *metrics.Value)
-				g, e := st.GetGauge(metrics.ID)
-				if !e {
-					c.JSON(http.StatusNotFound, gin.H{
-						"error": badrequest,
-					})
-					return
-				} else {
-					metrics.Value = &g
-					c.JSON(http.StatusOK, metrics)
-				}
-
-			case "counter":
-				st.AddCounter(metrics.ID, *metrics.Delta)
-				g, e := st.GetCounter(metrics.ID)
-				if !e {
-					c.JSON(http.StatusNotFound, gin.H{
-						"error": badrequest,
-					})
-					return
-				} else {
-					metrics.Delta = &g
-					c.JSON(http.StatusOK, metrics)
-				}
-			default:
+			// Обновляем метрику в хранилище
+			err = st.UpdateMetric(m, f, p)
+			// Если произошла ошибка при обновлении, возвращаем ошибку 500 Internal Server Error
+			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
-					"error": badrequest,
+					"error": err,
 				})
 				return
 			}
-		}
-	}
-}
-
-func Update(st storage.Storage) gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		switch c.Param("type") {
-		case "gauge":
-			err := st.AddGaugeAsString(c.Param("name"), c.Param("value"))
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": badrequest,
-				})
-			}
-
-		case "counter":
-			err := st.AddCounterAsString(c.Param("name"), c.Param("value"))
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": badrequest,
-				})
-			}
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": badrequest,
-			})
+			// Получаем обновленную метрику из хранилища
+			st.GetMetric(m)
+			// Возвращаем обновленную метрику клиенту с кодом 200 OK
+			c.JSON(http.StatusOK, m)
 			return
 		}
 	}
 }
 
+// UpdateFromURLPath обновляет метрику из параметров URL.
+func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Создаем новую пустую метрику
+		m := &model.Metrics{}
+		// Парсим параметры URL в структуру Metrics
+		err := m.URLPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
+		// Если произошла ошибка при парсинге, возвращаем ошибку 400
+		if err != nil {
+			c.String(http.StatusBadRequest, badrequest)
+			return
+		}
+		// Обновляем метрику в хранилище
+		err = st.UpdateMetric(m, f, p)
+		// Если произошла ошибка при обновлении, возвращаем ошибку 400
+		if err != nil {
+			c.String(http.StatusBadRequest, badrequest)
+			return
+		}
+		// Получаем обновленную метрику из хранилища
+		st.GetMetric(m)
+		// Возвращаем обновленную метрику клиенту с кодом 200 OK
+		if m.MType == "gauge" {
+			c.String(http.StatusOK, fmt.Sprintf("%v", *m.Value))
+		} else {
+			c.String(http.StatusOK, fmt.Sprintf("%d", *m.Delta))
+		}
+	}
+}
+
+// Get возвращает метрику по ее имени.
 func Get(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		switch c.Param("type") {
-		case "gauge":
-			g, e := st.GetGauge(c.Param("name"))
-			if !e {
-				c.JSON(http.StatusNotFound, gin.H{
-					"error": badrequest,
-				})
-				return
-			} else {
-				gs := fmt.Sprintf("%v", g)
-				c.String(http.StatusOK, gs)
-			}
-		case "counter":
-			g, e := st.GetCounter(c.Param("name"))
-			if !e {
-				c.JSON(http.StatusNotFound, gin.H{
-					"error": badrequest,
-				})
-				return
-			} else {
-				gs := fmt.Sprintf("%v", g)
-				c.String(http.StatusOK, gs)
-			}
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": badrequest,
-			})
+		// Создаем новую пустую метрику
+		m := &model.Metrics{}
+		// Парсим параметры URL в структуру Metrics
+		err := m.URLPathToMetric(c.Param("type"), c.Param("name"), c.Param("value"))
+		// Если произошла ошибка при парсинге, возвращаем ошибку 400
+		if err != nil {
+			c.String(http.StatusBadRequest, badrequest)
 			return
+		}
+		// Получаем метрику из хранилища
+		b := st.GetMetric(m)
+		// Если метрика не найдена, возвращаем ошибку 404 Not Found
+		if !b {
+			c.String(http.StatusNotFound, badrequest)
+			return
+		}
+		// Возвращаем метрику клиенту с кодом 200 OK
+		if m.MType == "gauge" {
+			c.String(http.StatusOK, fmt.Sprintf("%v", *m.Value))
+		} else {
+			c.String(http.StatusOK, fmt.Sprintf("%d", *m.Delta))
 		}
 	}
 }
 
-func GetJSON(st storage.Storage) gin.HandlerFunc {
+// GetBodyJSON возвращает метрику из тела запроса в формате JSON.
+func GetBodyJSON(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get("Content-Type") != "application/json" {
+			// Если нет, возвращаем ошибку 415 Unsupported Media Type
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
 			})
 			return
 		} else {
-			var metrics Metrics
-			err := json.NewDecoder(c.Request.Body).Decode(&metrics)
+			// Создаем новую пустую метрику
+			m := &model.Metrics{}
+			// Получаем тело запроса
+			body := c.Request.Body
+			// Парсим тело запроса в структуру Metrics
+			err := m.BodyToMetric(&body)
+			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": badrequest,
 				})
 				return
 			}
-			switch metrics.MType {
-			case "gauge":
-				g, e := st.GetGauge(metrics.ID)
-				if !e {
-					c.JSON(http.StatusNotFound, gin.H{
-						"error": badrequest,
-					})
-					return
-				} else {
-					metrics.Value = &g
-					c.JSON(http.StatusOK, metrics)
-				}
-			case "counter":
-				g, e := st.GetCounter(metrics.ID)
-				if !e {
-					c.JSON(http.StatusNotFound, gin.H{
-						"error": badrequest,
-					})
-					return
-				} else {
-					metrics.Delta = &g
-					c.JSON(http.StatusOK, metrics)
-				}
-			default:
-				c.JSON(http.StatusBadRequest, gin.H{
+			// Получаем метрику из хранилища
+			b := st.GetMetric(m)
+			// Если метрика не найдена, возвращаем ошибку 404 Not Found
+			if !b {
+				c.JSON(http.StatusNotFound, gin.H{
 					"error": badrequest,
 				})
 				return
 			}
+			// Возвращаем метрику клиенту с кодом 200 OK
+			c.JSON(http.StatusOK, m)
+			return
 		}
 	}
 }
 
+// GetAllKeys возвращает все ключи метрик.
 func GetAllKeys(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+		// Получаем все ключи метрик из хранилища
 		gval, cval := st.GetAllMetricNames()
+		// Возвращаем ключи метрик клиенту с кодом 200 OK
 		c.HTML(200, "table.tmpl", gin.H{
 			"Title":         "Metric Names",
 			"GaugeValues":   gval,

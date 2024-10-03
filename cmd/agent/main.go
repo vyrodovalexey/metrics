@@ -1,15 +1,11 @@
 package main
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/json"
-	"flag"
 	"fmt"
-	"github.com/caarlos0/env/v6"
+	"github.com/vyrodovalexey/metrics/internal/agent/config"
+	"github.com/vyrodovalexey/metrics/internal/agent/sendmetrics"
+	"github.com/vyrodovalexey/metrics/internal/model"
 	"github.com/vyrodovalexey/metrics/internal/storage"
-	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"reflect"
@@ -18,230 +14,164 @@ import (
 )
 
 const (
-	serverAddr                = "localhost:8080"
-	defaultReportInterval     = 10
-	defaultPoolInterval       = 2
-	sendJSON                  = true
-	maxIdleConnectionsPerHost = 10
-	reconnectTimeout          = 5
-	maxRetries                = 5
+	maxIdleConnectionsPerHost = 10   // Максимальное количество неактивных соединений на хост
+	requestTimeout            = 30   // Таймаут запроса в секундах
+	sendJSON                  = true // Флаг для отправки данных в формате JSON
 )
 
-type Config struct {
-	EndpointAddr   string `env:"ADDRESS"`
-	ReportInterval int    `env:"REPORT_INTERVAL"`
-	PoolInterval   int    `env:"POLL_INTERVAL"`
-}
-
-type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
-}
-
+// Структура для сбора метрик
 type metrics struct {
-	Alloc         storage.Gauge
-	BuckHashSys   storage.Gauge
-	Frees         storage.Gauge
-	GCCPUFraction storage.Gauge
-	GCSys         storage.Gauge
-	HeapAlloc     storage.Gauge
-	HeapIdle      storage.Gauge
-	HeapInuse     storage.Gauge
-	HeapObjects   storage.Gauge
-	HeapReleased  storage.Gauge
-	HeapSys       storage.Gauge
-	LastGC        storage.Gauge
-	Lookups       storage.Gauge
-	MCacheInuse   storage.Gauge
-	MCacheSys     storage.Gauge
-	MSpanInuse    storage.Gauge
-	MSpanSys      storage.Gauge
-	Mallocs       storage.Gauge
-	NextGC        storage.Gauge
-	NumForcedGC   storage.Gauge
-	NumGC         storage.Gauge
-	OtherSys      storage.Gauge
-	PauseTotalNs  storage.Gauge
-	StackInuse    storage.Gauge
-	StackSys      storage.Gauge
-	Sys           storage.Gauge
-	TotalAlloc    storage.Gauge
-	RandomValue   storage.Gauge
-	PollCount     storage.Counter
+	Alloc         storage.Gauge   // Объем выделенной памяти
+	BuckHashSys   storage.Gauge   // Память, используемая для BuckHash
+	Frees         storage.Gauge   // Количество освобожденной памяти
+	GCCPUFraction storage.Gauge   // Доля CPU, используемая сборщиком мусора
+	GCSys         storage.Gauge   // Память, используемая сборщиком мусора
+	HeapAlloc     storage.Gauge   // Объем выделенной кучи
+	HeapIdle      storage.Gauge   // Неиспользуемая память в куче
+	HeapInuse     storage.Gauge   // Используемая память в куче
+	HeapObjects   storage.Gauge   // Количество объектов в куче
+	HeapReleased  storage.Gauge   // Освобожденная память в куче
+	HeapSys       storage.Gauge   // Общая память кучи
+	LastGC        storage.Gauge   // Время последней сборки мусора
+	Lookups       storage.Gauge   // Количество обращений к памяти
+	MCacheInuse   storage.Gauge   // Используемая память для кэша
+	MCacheSys     storage.Gauge   // Общая память для кэша
+	MSpanInuse    storage.Gauge   // Используемая память для MSpan
+	MSpanSys      storage.Gauge   // Общая память для MSpan
+	Mallocs       storage.Gauge   // Количество выделений памяти
+	NextGC        storage.Gauge   // Время до следующей сборки мусора
+	NumForcedGC   storage.Gauge   // Количество принудительных сборок мусора
+	NumGC         storage.Gauge   // Количество сборок мусора
+	OtherSys      storage.Gauge   // Другая системная память
+	PauseTotalNs  storage.Gauge   // Общее время паузы в наносекундах
+	StackInuse    storage.Gauge   // Используемая память стека
+	StackSys      storage.Gauge   // Общая память стека
+	Sys           storage.Gauge   // Общая системная память
+	TotalAlloc    storage.Gauge   // Общее количество выделенной памяти
+	RandomValue   storage.Gauge   // Случайное значение
+	PollCount     storage.Counter // Счетчик опросов
 }
 
+// Функция для создания HTTP клиента
 func httpClient() *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConnsPerHost: maxIdleConnectionsPerHost,
+			MaxIdleConnsPerHost: maxIdleConnectionsPerHost, // Устанавливаем максимальное количество неактивных соединений
 		},
-		Timeout: reconnectTimeout * time.Second,
+		Timeout: requestTimeout * time.Second, // Устанавливаем таймаут запроса
 	}
 
 	return client
 }
 
-func SendMetricPlain(url string) {
-	cl := httpClient()
-	req, errr := http.NewRequest("POST", url, nil)
-	if errr != nil {
-		log.Fatal(errr)
-	}
-	req.Header.Set("Content-Type", "text/plain")
-
-	resp, err := cl.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
-	defer resp.Body.Close()
-}
-
-func SendMetricJSON(url string, m *Metrics) {
-	cl := httpClient()
-	jm, _ := json.Marshal(*m)
-	for i := 0; i <= maxRetries; i++ {
-		req, errr := http.NewRequest("POST", url, bytes.NewBuffer(jm))
-		if errr != nil {
-			log.Println(errr)
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Accept-Encoding", "gzip")
-		req.Header.Set("Content-Encoding", "gzip")
-		// Attempt the request
-		resp, err := cl.Do(req)
-		if err == nil {
-			fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
-			defer resp.Body.Close()
-			var reader io.ReadCloser
-			switch resp.Header.Get("Content-Encoding") {
-			case "gzip":
-				// Handle GZIP-encoded response
-				reader, err = gzip.NewReader(resp.Body)
-				if err != nil {
-					log.Fatal("failed to create gzip reader: %w", err)
-				}
-				defer reader.Close()
-			default:
-				// Response is not gzipped, use the response body as is
-				reader = resp.Body
-			}
-			body, err := io.ReadAll(reader)
-			if err != nil {
-				fmt.Println("Error reading response body:", err)
-				return
-			}
-
-			// Print the response body
-			log.Println(string(body))
-			break // Successful request, exit retry loop
-		}
-
-		time.Sleep(reconnectTimeout * time.Second)
-
-	}
-}
-
-func ScribeMetrics(m *metrics, p time.Duration, stop int64) {
+// Функция для сбора метрик
+func updateMetrics(m *metrics) {
+	// Структура для хранения статистики памяти
 	var memStats runtime.MemStats
+	// Читаем статистику памяти
+	runtime.ReadMemStats(&memStats)
+	m.Alloc = float64(memStats.Alloc)
+	m.BuckHashSys = float64(memStats.BuckHashSys)
+	m.GCCPUFraction = memStats.GCCPUFraction
+	m.Frees = float64(memStats.Frees)
+	m.GCSys = float64(memStats.GCSys)
+	m.HeapAlloc = float64(memStats.HeapAlloc)
+	m.HeapIdle = float64(memStats.HeapIdle)
+	m.HeapInuse = float64(memStats.HeapInuse)
+	m.HeapObjects = float64(memStats.HeapObjects)
+	m.HeapReleased = float64(memStats.HeapReleased)
+	m.HeapSys = float64(memStats.HeapSys)
+	m.LastGC = float64(memStats.LastGC)
+	m.Lookups = float64(memStats.Lookups)
+	m.MCacheInuse = float64(memStats.MCacheInuse)
+	m.MCacheSys = float64(memStats.MCacheSys)
+	m.MSpanInuse = float64(memStats.MSpanInuse)
+	m.MSpanSys = float64(memStats.MSpanSys)
+	m.Mallocs = float64(memStats.Mallocs)
+	m.NextGC = float64(memStats.NextGC)
+	m.NumForcedGC = float64(memStats.NumForcedGC)
+	m.NumGC = float64(memStats.NumGC)
+	m.OtherSys = float64(memStats.OtherSys)
+	m.PauseTotalNs = float64(memStats.PauseTotalNs)
+	m.StackInuse = float64(memStats.StackInuse)
+	m.StackSys = float64(memStats.StackSys)
+	m.Sys = float64(memStats.Sys)
+	m.TotalAlloc = float64(memStats.TotalAlloc)
+	m.RandomValue = rand.Float64()
+	m.PollCount += 1
+}
+
+// Функция для проверки, нужно ли остановить опрос
+func shouldStop(counter int64, stop int64) bool {
+	if counter < stop || stop == -1 { // Если счетчик меньше значения остановки или значение остановки равно -1
+		return false // Не останавливаем
+	} else {
+		return true // Останавливаем
+	}
+}
+
+// Функция для записи метрик
+func scribeMetrics(m *metrics, p time.Duration, stop int64) {
 
 	for {
-		if m.PollCount >= stop && stop != -1 {
+		// Проверяем, нужно ли остановить опрос
+		if shouldStop(m.PollCount, stop) {
 			return
-		} else {
-			runtime.ReadMemStats(&memStats)
-			m.Alloc = float64(memStats.Alloc)
-			m.BuckHashSys = float64(memStats.BuckHashSys)
-			m.GCCPUFraction = memStats.GCCPUFraction
-			m.Frees = float64(memStats.Frees)
-			m.GCSys = float64(memStats.GCSys)
-			m.HeapAlloc = float64(memStats.HeapAlloc)
-			m.HeapIdle = float64(memStats.HeapIdle)
-			m.HeapInuse = float64(memStats.HeapInuse)
-			m.HeapObjects = float64(memStats.HeapObjects)
-			m.HeapReleased = float64(memStats.HeapReleased)
-			m.HeapSys = float64(memStats.HeapSys)
-			m.LastGC = float64(memStats.LastGC)
-			m.Lookups = float64(memStats.Lookups)
-			m.MCacheInuse = float64(memStats.MCacheInuse)
-			m.MCacheSys = float64(memStats.MCacheSys)
-			m.MSpanInuse = float64(memStats.MSpanInuse)
-			m.MSpanSys = float64(memStats.MSpanSys)
-			m.Mallocs = float64(memStats.Mallocs)
-			m.NextGC = float64(memStats.NextGC)
-			m.NumForcedGC = float64(memStats.NumForcedGC)
-			m.NumGC = float64(memStats.NumGC)
-			m.OtherSys = float64(memStats.OtherSys)
-			m.PauseTotalNs = float64(memStats.PauseTotalNs)
-			m.StackInuse = float64(memStats.StackInuse)
-			m.StackSys = float64(memStats.StackSys)
-			m.Sys = float64(memStats.Sys)
-			m.TotalAlloc = float64(memStats.TotalAlloc)
-			m.RandomValue = rand.Float64()
-			m.PollCount += 1
-			time.Sleep(p * time.Second)
 		}
+		// Собираем метрики
+		updateMetrics(m)
+		// Ждем заданный интервал времени
+		<-time.After(p * time.Second)
 	}
 }
 
 func main() {
 
-	var cfg Config
-	err := env.Parse(&cfg)
+	// Инициализируем новый экземпляр конфигурации и
+	// парсим настройки конфигурации
+	cfg := config.New()
+	ConfigParser(cfg)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if len(cfg.EndpointAddr) == 0 {
-		flag.StringVar(&cfg.EndpointAddr, "a", serverAddr, "input ip:port or host:port of metrics server")
-	}
-	if cfg.ReportInterval < 1 {
-		flag.IntVar(&cfg.ReportInterval, "r", defaultReportInterval, "seconds delay interval to send metrics to metrics server")
-	}
-	if cfg.PoolInterval < 1 {
-		flag.IntVar(&cfg.PoolInterval, "p", defaultPoolInterval, "seconds delay between scribing metrics from host")
-	}
-	flag.Parse()
-	//client := httpClient()
+	client := httpClient()
+	// Инициализируем структуру метрик
 	m := metrics{}
-	// variable for setup
-	var metrict string
+	// Костыль - переменная для хранения типа метрики
+	var metricSetup string
 
-	var met Metrics
+	// Инициализируем структуру для метрик
+	var met model.Metrics
 
-	go ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
+	// Запускаем горутину для сбора метрик
+	go scribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
 			for i := 0; i < val.NumField(); i++ {
 				met.ID = typ.Field(i).Name
-				// fucking setup to apply type
+				// Костыль - Настройка типа метрики
 				switch typ.Field(i).Name {
 				case "PollCount":
-					metrict = "counter"
+					metricSetup = "counter"
 					met.MType = "counter"
 					sint := val.Field(i).Int()
 					met.Delta = &sint
 				default:
-					metrict = "gauge"
+					metricSetup = "gauge"
 					met.MType = "gauge"
 					sfloat := val.Field(i).Float()
 					met.Value = &sfloat
 				}
+				// Выбираем отправку в формате JSON или plaintext
 				if sendJSON {
 					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
-					SendMetricJSON(r, &met)
+					sendmetrics.SendAsJSON(client, r, &met)
 				} else {
-					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metrict, typ.Field(i).Name, val.Field(i))
-
-					SendMetricPlain(r)
+					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metricSetup, typ.Field(i).Name, val.Field(i))
+					sendmetrics.SendAsPlain(client, r)
 				}
 			}
-			time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
+			<-time.After(time.Duration(cfg.ReportInterval) * time.Second)
 		}
 	}
 }

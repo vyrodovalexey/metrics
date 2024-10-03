@@ -1,14 +1,14 @@
 package main
 
 import (
+	"github.com/vyrodovalexey/metrics/internal/server/config"
+	"github.com/vyrodovalexey/metrics/internal/server/logging"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
-	"time"
 )
 
 func TestRequest(t *testing.T) {
@@ -16,19 +16,22 @@ func TestRequest(t *testing.T) {
 	counter := make(map[string]storage.Counter)
 	mst := storage.MemStorage{GaugeMap: gauge, CounterMap: counter}
 
-	loggerConfig := zap.NewProductionConfig()
-	loggerConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
-	loggerConfig.DisableCaller = true
-
-	logger, logerr := loggerConfig.Build()
-	if logerr != nil {
-		log.Fatalf("can't initialize zap logger: %v", logerr)
+	sugar := logging.NewLogging(zap.InfoLevel)
+	// Создаем новый экземпляр конфигурации
+	cfg := config.New()
+	cfg.FileStoragePath = "/tmp/test.json"
+	// Парсим настройки конфигурации
+	ConfigParser(cfg)
+	var awf bool
+	if cfg.StoreInterval > 0 {
+		awf = false
+	} else {
+		awf = true
 	}
-	// nolint:errcheck
-	defer logger.Sync()
 
-	sugar := logger.Sugar()
-	router := SetupRouter(&mst, sugar)
+	file, _ := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+
+	router := SetupRouter(&mst, file, sugar, awf)
 	router.LoadHTMLGlob("../../templates/*")
 	tests := []struct {
 		name           string
