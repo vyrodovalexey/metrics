@@ -2,16 +2,33 @@ package main
 
 import (
 	"github.com/vyrodovalexey/metrics/internal/storage"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestRequest(t *testing.T) {
 	gauge := make(map[string]storage.Gauge)
 	counter := make(map[string]storage.Counter)
 	mst := storage.MemStorage{GaugeMap: gauge, CounterMap: counter}
-	router := SetupRouter(&mst)
+
+	loggerConfig := zap.NewProductionConfig()
+	loggerConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
+	loggerConfig.DisableCaller = true
+
+	logger, logerr := loggerConfig.Build()
+	if logerr != nil {
+		log.Fatalf("can't initialize zap logger: %v", logerr)
+	}
+	// nolint:errcheck
+	defer logger.Sync()
+
+	sugar := logger.Sugar()
+	router := SetupRouter(&mst, sugar)
 	router.LoadHTMLGlob("../../templates/*")
 	tests := []struct {
 		name           string

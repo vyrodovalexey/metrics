@@ -4,12 +4,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/vyrodovalexey/metrics/internal/handlers"
 	"github.com/vyrodovalexey/metrics/internal/storage"
+	"go.uber.org/zap"
+	"io"
 )
 
-func SetupRouter(mst *storage.MemStorage) *gin.Engine {
+func SetupRouter(st storage.Storage, log *zap.SugaredLogger) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+	gin.DefaultWriter = io.Discard
 	router := gin.Default()
-	router.POST("/update/:type/:name/:value", handlers.Update(mst))
-	router.GET("/value/:type/:name", handlers.Get(mst))
-	router.GET("/", handlers.GetAllKeys(mst))
+	router.Use(LoggingMiddleware(log))
+	router.POST("/update/:type/:name/:value", handlers.Update(st))
+	router.GET("/value/:type/:name", handlers.Get(st))
+	router.GET("/", handlers.GetAllKeys(st))
 	return router
 }

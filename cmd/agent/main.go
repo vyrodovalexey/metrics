@@ -13,6 +13,12 @@ import (
 	"time"
 )
 
+const (
+	serverAddr            = "localhost:8080"
+	defaultReportInterval = 10
+	defaultPoolInterval   = 2
+)
+
 type Config struct {
 	EndpointAddr   string `env:"ADDRESS"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
@@ -118,13 +124,13 @@ func main() {
 	}
 
 	if len(cfg.EndpointAddr) == 0 {
-		flag.StringVar(&cfg.EndpointAddr, "a", "localhost:8080", "input ip:port or host:port of metrics server")
+		flag.StringVar(&cfg.EndpointAddr, "a", serverAddr, "input ip:port or host:port of metrics server")
 	}
 	if cfg.ReportInterval < 1 {
-		flag.IntVar(&cfg.ReportInterval, "r", 10, "seconds delay interval to send metrics to metrics server")
+		flag.IntVar(&cfg.ReportInterval, "r", defaultReportInterval, "seconds delay interval to send metrics to metrics server")
 	}
 	if cfg.PoolInterval < 1 {
-		flag.IntVar(&cfg.PoolInterval, "p", 2, "seconds delay between scribing metrics from host")
+		flag.IntVar(&cfg.PoolInterval, "p", defaultPoolInterval, "seconds delay between scribing metrics from host")
 	}
 	flag.Parse()
 	client := &http.Client{}
