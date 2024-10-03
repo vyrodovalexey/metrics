@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/vyrodovalexey/metrics/internal/storage"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -106,19 +108,40 @@ func SendMetricJSON(url string, m *Metrics) {
 			log.Println(errr)
 		}
 		req.Header.Set("Content-Type", "application/json")
-
+		req.Header.Set("Accept-Encoding", "gzip")
+		req.Header.Set("Content-Encoding", "gzip")
 		// Attempt the request
 		resp, err := cl.Do(req)
 		if err == nil {
 			fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
 			defer resp.Body.Close()
+			var reader io.ReadCloser
+			switch resp.Header.Get("Content-Encoding") {
+			case "gzip":
+				// Handle GZIP-encoded response
+				reader, err = gzip.NewReader(resp.Body)
+				if err != nil {
+					log.Fatal("failed to create gzip reader: %w", err)
+				}
+				defer reader.Close()
+			default:
+				// Response is not gzipped, use the response body as is
+				reader = resp.Body
+			}
+			body, err := io.ReadAll(reader)
+			if err != nil {
+				fmt.Println("Error reading response body:", err)
+				return
+			}
+
+			// Print the response body
+			log.Println(string(body))
 			break // Successful request, exit retry loop
 		}
 
 		time.Sleep(reconnectTimeout * time.Second)
 
 	}
-
 }
 
 func ScribeMetrics(m *metrics, p time.Duration, stop int64) {
