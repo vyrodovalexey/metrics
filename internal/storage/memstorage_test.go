@@ -23,8 +23,8 @@ func TestMemStorage_Positive_AddGauge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := &MemStorage{}
-			storage.Init()
-			if err := storage.AddGauge(tt.args.name, tt.args.item); err != tt.wantErr {
+			storage.New()
+			if err := storage.AddGaugeAsString(tt.args.name, tt.args.item); err != tt.wantErr {
 				t.Errorf("AddGauge() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -50,8 +50,8 @@ func TestMemStorage_Negative_AddGauge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := &MemStorage{}
-			storage.Init()
-			if err := storage.AddGauge(tt.args.name, tt.args.item); err == tt.wantErr {
+			storage.New()
+			if err := storage.AddGaugeAsString(tt.args.name, tt.args.item); err == tt.wantErr {
 				t.Errorf("AddGauge() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -77,8 +77,8 @@ func TestMemStorage_Positive_AddCounter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := &MemStorage{}
-			storage.Init()
-			if err := storage.AddCounter(tt.args.name, tt.args.item); err != tt.wantErr {
+			storage.New()
+			if err := storage.AddCounterAsString(tt.args.name, tt.args.item); err != tt.wantErr {
 				t.Errorf("AddCounter() error = %v, dontWantErr %v", err, tt.wantErr)
 			}
 		})
@@ -109,8 +109,8 @@ func TestMemStorage_Negative_AddCounter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := &MemStorage{}
-			storage.Init()
-			if err := storage.AddCounter(tt.args.name, tt.args.item); err == tt.dontWantErr {
+			storage.New()
+			if err := storage.AddCounterAsString(tt.args.name, tt.args.item); err == tt.dontWantErr {
 				t.Errorf("AddCounter() error = %v, dontWantErr %v", err, tt.dontWantErr)
 			}
 		})
@@ -133,9 +133,9 @@ func TestMemStorage_Positive_GetAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := &MemStorage{}
-			storage.Init()
-			storage.AddCounter("test", "12")
-			storage.AddGauge("test", "12.1")
+			storage.New()
+			storage.AddCounterAsString("test", "12")
+			storage.AddGaugeAsString("test", "12.1")
 			gres, cres := storage.GetAllMetricNames()
 			if len(cres) < tt.countermapsize {
 				t.Errorf("Size of ConterMap is %d and it less then required size %d", len(cres), tt.countermapsize)

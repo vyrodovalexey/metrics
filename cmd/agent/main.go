@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
@@ -14,15 +16,26 @@ import (
 )
 
 const (
-	serverAddr            = "localhost:8080"
-	defaultReportInterval = 10
-	defaultPoolInterval   = 2
+	serverAddr                = "localhost:8080"
+	defaultReportInterval     = 10
+	defaultPoolInterval       = 2
+	sendJSON                  = true
+	maxIdleConnectionsPerHost = 10
+	reconnectTimeout          = 5
+	maxRetries                = 5
 )
 
 type Config struct {
 	EndpointAddr   string `env:"ADDRESS"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PoolInterval   int    `env:"POLL_INTERVAL"`
+}
+
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
 type metrics struct {
@@ -57,7 +70,19 @@ type metrics struct {
 	PollCount     storage.Counter
 }
 
-func SendMetric(cl http.Client, url string) {
+func httpClient() *http.Client {
+	client := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: maxIdleConnectionsPerHost,
+		},
+		Timeout: reconnectTimeout * time.Second,
+	}
+
+	return client
+}
+
+func SendMetricPlain(url string) {
+	cl := httpClient()
 	req, errr := http.NewRequest("POST", url, nil)
 	if errr != nil {
 		log.Fatal(errr)
@@ -70,6 +95,30 @@ func SendMetric(cl http.Client, url string) {
 	}
 	fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
 	defer resp.Body.Close()
+}
+
+func SendMetricJSON(url string, m *Metrics) {
+	cl := httpClient()
+	jm, _ := json.Marshal(*m)
+	for i := 0; i <= maxRetries; i++ {
+		req, errr := http.NewRequest("POST", url, bytes.NewBuffer(jm))
+		if errr != nil {
+			log.Println(errr)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		// Attempt the request
+		resp, err := cl.Do(req)
+		if err == nil {
+			fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
+			defer resp.Body.Close()
+			break // Successful request, exit retry loop
+		}
+
+		time.Sleep(reconnectTimeout * time.Second)
+
+	}
+
 }
 
 func ScribeMetrics(m *metrics, p time.Duration, stop int64) {
@@ -133,31 +182,43 @@ func main() {
 		flag.IntVar(&cfg.PoolInterval, "p", defaultPoolInterval, "seconds delay between scribing metrics from host")
 	}
 	flag.Parse()
-	client := &http.Client{}
+	//client := httpClient()
 	m := metrics{}
 	// variable for setup
 	var metrict string
 
+	var met Metrics
+
 	go ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
-		time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
-
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
 			for i := 0; i < val.NumField(); i++ {
+				met.ID = typ.Field(i).Name
 				// fucking setup to apply type
 				switch typ.Field(i).Name {
 				case "PollCount":
 					metrict = "counter"
+					met.MType = "counter"
+					sint := val.Field(i).Int()
+					met.Delta = &sint
 				default:
 					metrict = "gauge"
+					met.MType = "gauge"
+					sfloat := val.Field(i).Float()
+					met.Value = &sfloat
 				}
+				if sendJSON {
+					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
+					SendMetricJSON(r, &met)
+				} else {
+					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metrict, typ.Field(i).Name, val.Field(i))
 
-				r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metrict, typ.Field(i).Name, val.Field(i))
-
-				SendMetric(*client, r)
+					SendMetricPlain(r)
+				}
 			}
+			time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 		}
 	}
 }

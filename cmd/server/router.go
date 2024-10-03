@@ -15,6 +15,8 @@ func SetupRouter(st storage.Storage, log *zap.SugaredLogger) *gin.Engine {
 	router.Use(LoggingMiddleware(log))
 	router.POST("/update/:type/:name/:value", handlers.Update(st))
 	router.GET("/value/:type/:name", handlers.Get(st))
+	router.POST("/update/", handlers.UpdateJSON(st))
+	router.POST("/value/", handlers.GetJSON(st))
 	router.GET("/", handlers.GetAllKeys(st))
 	return router
 }

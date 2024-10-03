@@ -21,7 +21,8 @@ type Config struct {
 func main() {
 
 	var st storage.Storage = &storage.MemStorage{}
-	st.Init()
+
+	st.New()
 
 	loggerConfig := zap.NewProductionConfig()
 	loggerConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)

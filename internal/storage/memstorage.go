@@ -10,12 +10,12 @@ type MemStorage struct {
 	CounterMap map[string]Counter
 }
 
-func (m *MemStorage) Init() {
+func (m *MemStorage) New() {
 	m.GaugeMap = make(map[string]Gauge)
 	m.CounterMap = make(map[string]Counter)
 }
 
-func (m *MemStorage) AddCounter(name string, item string) error {
+func (m *MemStorage) AddCounterAsString(name string, item string) error {
 	counter, err := strconv.ParseInt(item, 10, 64)
 	if err == nil {
 		m.CounterMap[name] = m.CounterMap[name] + counter
@@ -24,12 +24,23 @@ func (m *MemStorage) AddCounter(name string, item string) error {
 
 }
 
-func (m *MemStorage) AddGauge(name string, item string) error {
+func (m *MemStorage) AddCounter(name string, item Counter) {
+	m.CounterMap[name] = m.CounterMap[name] + item
+
+}
+
+func (m *MemStorage) AddGaugeAsString(name string, item string) error {
 	gauge, err := strconv.ParseFloat(item, 64)
 	if err == nil {
 		m.GaugeMap[name] = gauge
 	}
 	return err
+
+}
+
+func (m *MemStorage) AddGauge(name string, item Gauge) {
+
+	m.GaugeMap[name] = item
 
 }
 
