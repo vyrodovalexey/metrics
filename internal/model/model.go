@@ -76,3 +76,17 @@ func (mod *Metrics) BodyToMetric(body *io.ReadCloser) error {
 	}
 	return err
 }
+
+func (mod *Metrics) PrintMetric() string {
+	var res string
+	switch mod.MType {
+	case "gauge":
+
+		res = fmt.Sprintf("%v", *mod.Value)
+
+	case "counter":
+		res = fmt.Sprintf("%d", *mod.Delta)
+	}
+	return res
+
+}
