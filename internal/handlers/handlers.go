@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v4"
 	"github.com/vyrodovalexey/metrics/internal/model"
 	"github.com/vyrodovalexey/metrics/internal/storage"
 	"net/http"
@@ -77,11 +79,17 @@ func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 		// Получаем обновленную метрику из хранилища
 		st.GetMetric(m)
 		// Возвращаем обновленную метрику клиенту с кодом 200 OK
-		if m.MType == "gauge" {
-			c.String(http.StatusOK, fmt.Sprintf("%v", *m.Value))
-		} else {
-			c.String(http.StatusOK, fmt.Sprintf("%d", *m.Delta))
+		c.String(http.StatusOK, m.PrintMetric())
+	}
+}
+
+func CheckDatabaseConnection(ctx context.Context, conn *pgx.Conn) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		err := conn.Ping(ctx)
+		if err != nil {
+			c.String(http.StatusInternalServerError, fmt.Sprintf("error: %v", err))
 		}
+		c.String(http.StatusOK, "ok")
 	}
 }
 
@@ -105,11 +113,8 @@ func Get(st storage.Storage) gin.HandlerFunc {
 			return
 		}
 		// Возвращаем метрику клиенту с кодом 200 OK
-		if m.MType == "gauge" {
-			c.String(http.StatusOK, fmt.Sprintf("%v", *m.Value))
-		} else {
-			c.String(http.StatusOK, fmt.Sprintf("%d", *m.Delta))
-		}
+		c.String(http.StatusOK, m.PrintMetric())
+
 	}
 }
 
@@ -159,7 +164,7 @@ func GetAllKeys(st storage.Storage) gin.HandlerFunc {
 		// Получаем все ключи метрик из хранилища
 		gval, cval := st.GetAllMetricNames()
 		// Возвращаем ключи метрик клиенту с кодом 200 OK
-		c.HTML(200, "table.tmpl", gin.H{
+		c.HTML(http.StatusOK, "table.tmpl", gin.H{
 			"Title":         "Metric Names",
 			"GaugeValues":   gval,
 			"CounterValues": cval,

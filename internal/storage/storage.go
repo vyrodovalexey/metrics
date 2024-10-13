@@ -11,6 +11,10 @@ type Counter = int64
 type Storage interface {
 	// New Создание нового хранилища
 	New()
+	// NewDatabaseConnection Создание соединения с базой данных
+	//NewDatabaseConnection(c string) (pgx.Conn, error)
+	// CheckDatabaseConnection Проверка соединения с базой данных
+	//CheckDatabaseConnection() error
 	// Load Загрузка хранилища из файла
 	Load(f *os.File) error
 	// UpdateGauge Добавление метрики Gauge
