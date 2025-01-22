@@ -1,12 +1,9 @@
 package handlers
 
 import (
-	"context"
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v4"
 	"github.com/vyrodovalexey/metrics/internal/model"
-	"github.com/vyrodovalexey/metrics/internal/storage"
+	"github.com/vyrodovalexey/metrics/internal/server/storage"
 	"net/http"
 	"os"
 )
@@ -83,15 +80,15 @@ func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 	}
 }
 
-func CheckDatabaseConnection(ctx context.Context, conn *pgx.Conn) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		err := conn.Ping(ctx)
-		if err != nil {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("error: %v", err))
-		}
-		c.String(http.StatusOK, "ok")
-	}
-}
+//func CheckDatabaseConnection(ctx context.Context, conn *pgx.Conn) gin.HandlerFunc {
+//	return func(c *gin.Context) {
+//		err := conn.Ping(ctx)
+//		if err != nil {
+//			c.String(http.StatusInternalServerError, fmt.Sprintf("error: %v", err))
+//		}
+//		c.String(http.StatusOK, "ok")
+//	}
+//}
 
 // Get возвращает метрику по ее имени.
 func Get(st storage.Storage) gin.HandlerFunc {

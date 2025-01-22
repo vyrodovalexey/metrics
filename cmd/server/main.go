@@ -1,11 +1,11 @@
 package main
 
 import (
-	"context"
-	"github.com/jackc/pgx/v4"
 	"github.com/vyrodovalexey/metrics/internal/server/config"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
-	"github.com/vyrodovalexey/metrics/internal/storage"
+	"github.com/vyrodovalexey/metrics/internal/server/memstorage"
+	"github.com/vyrodovalexey/metrics/internal/server/routing"
+	storage2 "github.com/vyrodovalexey/metrics/internal/server/storage"
 	"go.uber.org/zap"
 	"os"
 )
@@ -31,17 +31,17 @@ func main() {
 		"Database connection string", cfg.DatabaseDSN,
 	)
 
-	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, cfg.DatabaseDSN)
-	//	return conn, err
-	if err != nil {
-		lg.Panicw("Initializing database connection...",
-			"Database connection error:", err,
-		)
-	}
+	//	ctx := context.Background()
+	//	conn, err := pgx.Connect(ctx, cfg.DatabaseDSN)
+	//	//	return conn, err
+	//	if err != nil {
+	//		lg.Panicw("Initializing database connection...",
+	//			"Database connection error:", err,
+	//		)
+	//	}
 
 	// Инициализируем интерфейс и структуру хранения данных
-	var st storage.Storage = &storage.MemStorage{}
+	var st storage2.Storage = &memstorage.MemStorage{}
 
 	// Открываем или создаем файл для хранения
 	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
@@ -54,7 +54,7 @@ func main() {
 	}
 	lg.Infow("File storage initialized")
 
-	// Проверяем, нужно ли загружать файл харнилища
+	// Проверяем, нужно ли загружать файл хранилища
 	// Если нет, инициализируем новое
 	if cfg.Restore {
 		err = st.Load(file)
@@ -82,7 +82,9 @@ func main() {
 	}
 
 	// Инициализируем маршрутизатор с хранилищем и логированием
-	r := SetupRouter(ctx, st, conn, file, lg, awf)
+	r := routing.SetupRouter(lg)
+	// Настраиваем маршрутизацию
+	routing.ConfigureRouting(r, st, file, awf)
 	// Загружаем HTML-шаблоны из указанной директории
 	r.LoadHTMLGlob("templates/*")
 	// Запускаем HTTP-сервер на заданном адресе
@@ -96,6 +98,6 @@ func main() {
 		)
 		return
 	}
-	defer conn.Close(ctx)
+	//	defer conn.Close(ctx)
 	defer file.Close()
 }

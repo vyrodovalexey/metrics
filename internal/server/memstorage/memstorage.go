@@ -1,29 +1,28 @@
-package storage
+package memstorage
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/model"
 	"io"
-	"log"
 	"os"
 	"time"
 )
 
 // MemStorage Структура для хранения метрик в памяти
 type MemStorage struct {
-	GaugeMap   map[string]Gauge
-	CounterMap map[string]Counter
+	GaugeMap   map[string]model.Gauge
+	CounterMap map[string]model.Counter
 }
 
 // New Создание нового хранилища
 func (m *MemStorage) New() {
-	m.GaugeMap = make(map[string]Gauge)
-	m.CounterMap = make(map[string]Counter)
+	m.GaugeMap = make(map[string]model.Gauge)
+	m.CounterMap = make(map[string]model.Counter)
 }
 
 // UpdateCounter Добавление метрики Counter
-func (m *MemStorage) UpdateCounter(name string, item Counter, f *os.File, p bool) error {
+func (m *MemStorage) UpdateCounter(name string, item model.Counter, f *os.File, p bool) error {
 	var err error
 	m.CounterMap[name] = m.CounterMap[name] + item // Увеличение значения счетчика
 	if p {
@@ -33,7 +32,7 @@ func (m *MemStorage) UpdateCounter(name string, item Counter, f *os.File, p bool
 }
 
 // UpdateGauge Добавление метрики Gauge
-func (m *MemStorage) UpdateGauge(name string, item Gauge, f *os.File, p bool) error {
+func (m *MemStorage) UpdateGauge(name string, item model.Gauge, f *os.File, p bool) error {
 	var err error
 	m.GaugeMap[name] = item
 	if p {
@@ -96,7 +95,7 @@ func (m *MemStorage) GetAllMetricNames() (map[string]string, map[string]string) 
 }
 
 // GetGauge Получение метрики Gauge
-func (m *MemStorage) GetGauge(name string) (Gauge, bool) {
+func (m *MemStorage) GetGauge(name string) (model.Gauge, bool) {
 	res, e := m.GaugeMap[name]
 	if e {
 		return res, e
@@ -105,7 +104,7 @@ func (m *MemStorage) GetGauge(name string) (Gauge, bool) {
 }
 
 // GetCounter Получение метрики Counter
-func (m *MemStorage) GetCounter(name string) (Counter, bool) {
+func (m *MemStorage) GetCounter(name string) (model.Counter, bool) {
 	res, e := m.CounterMap[name]
 	if e {
 		return res, e
@@ -133,25 +132,25 @@ func (m *MemStorage) Load(f *os.File) error {
 }
 
 // SaveAsync Асинхронное сохранение данных хранилища метрик в файл
-func (m *MemStorage) SaveAsync(f *os.File, interval uint) {
+func (m *MemStorage) SaveAsync(f *os.File, interval uint) error {
 	for {
 		mst, err := json.Marshal(m)
 		if err != nil {
-			log.Fatalf("Error move to json: %v", err)
+			return err
 		}
 
 		// Очистка файла
 		err = f.Truncate(0)
 		if err != nil {
-			log.Fatalf("Can't truncate file error: %v", err)
+			return err
 		}
 		_, err = f.Seek(0, 0) // Перемещение курсора в начало файла
 		if err != nil {
-			log.Fatalf("Can't seek on start error: %v", err)
+			return err
 		}
 		_, err = f.Write(mst) // Запись данных хранилища метрик в файл
 		if err != nil {
-			log.Fatalf("Error writing to file: %v", err)
+			return err
 		}
 		// Интервал ожидания
 		<-time.After(time.Duration(interval) * time.Second)

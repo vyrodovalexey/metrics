@@ -1,17 +1,18 @@
 package main
 
 import (
+	"github.com/vyrodovalexey/metrics/internal/agent/scribemetrics"
 	"testing"
 	"time"
 )
 
 func TestScribeMetrics(t *testing.T) {
 
-	m := metrics{}
+	m := scribemetrics.MemMetrics{}
 
 	tests := []struct {
 		name          string
-		met           *metrics
+		met           *scribemetrics.MemMetrics
 		pollInterval  time.Duration
 		stop          int64
 		wantpoolcount int64
@@ -26,7 +27,7 @@ func TestScribeMetrics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scribeMetrics(tt.met, tt.pollInterval, tt.stop)
+			scribemetrics.ScribeMetrics(tt.met, tt.pollInterval, tt.stop)
 			if tt.met.PollCount != tt.wantpoolcount {
 				t.Errorf("ScribeMetrics() Pollcount = %d, WantPoolCount %d", tt.met.PollCount, tt.wantpoolcount)
 			}

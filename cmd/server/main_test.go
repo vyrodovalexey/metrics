@@ -1,9 +1,11 @@
 package main
 
 import (
+	"github.com/vyrodovalexey/metrics/internal/model"
 	"github.com/vyrodovalexey/metrics/internal/server/config"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
-	"github.com/vyrodovalexey/metrics/internal/storage"
+	"github.com/vyrodovalexey/metrics/internal/server/memstorage"
+	"github.com/vyrodovalexey/metrics/internal/server/routing"
 	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
@@ -12,9 +14,9 @@ import (
 )
 
 func TestRequest(t *testing.T) {
-	gauge := make(map[string]storage.Gauge)
-	counter := make(map[string]storage.Counter)
-	mst := storage.MemStorage{GaugeMap: gauge, CounterMap: counter}
+	gauge := make(map[string]model.Gauge)
+	counter := make(map[string]model.Counter)
+	mst := memstorage.MemStorage{GaugeMap: gauge, CounterMap: counter}
 
 	sugar := logging.NewLogging(zap.InfoLevel)
 	// Создаем новый экземпляр конфигурации
@@ -31,11 +33,12 @@ func TestRequest(t *testing.T) {
 
 	file, _ := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 
-	router := SetupRouter(&mst, file, sugar, awf)
+	router := routing.SetupRouter(sugar)
+	routing.ConfigureRouting(router, &mst, file, awf)
 	router.LoadHTMLGlob("../../templates/*")
 	tests := []struct {
 		name           string
-		st             *storage.MemStorage
+		st             *memstorage.MemStorage
 		method         string
 		url            string
 		mimetype       string
