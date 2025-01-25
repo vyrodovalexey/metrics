@@ -42,11 +42,11 @@ func main() {
 
 	// Инициализируем интерфейс и структуру хранения данных
 	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
-	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
+	file, errr := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
+	if errr != nil {
 		// Логируем ошибку, если открытие/создание файла не удалось
 		lg.Panicw("Initializing file storage...",
-			"Error creating file:", err,
+			"Error creating file:", errr,
 		)
 		return
 	}
