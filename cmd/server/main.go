@@ -67,9 +67,12 @@ func main() {
 	} else {
 		// Логируем ошибку, если открытие/создание файла не удалось
 		err := st.NewMemStorage(cfg.FileStoragePath, cfg.StoreInterval)
-		lg.Panicw("Initializing file storage...",
-			"Error creating file:", err,
-		)
+		if err != nil {
+			lg.Panicw("Initializing file storage...",
+				"Error creating file:", err,
+			)
+			return
+		}
 	}
 	lg.Infow("File storage initialized")
 
