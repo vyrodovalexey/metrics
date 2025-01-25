@@ -1,10 +1,10 @@
 package config
 
 const (
-	defaultListenAddr    = ":8080"                     // Адрес для прослушивания по умолчанию (:8080)
-	defaultStoreInterval = 300                         // Интервал сохранения данных по умолчанию (в секундах)
-	defaultFileStorePath = "/tmp/metrics-storage.json" // Путь к файлу хранения метрик по умолчанию
-	defaultRestore       = true                        // Флаг загрузки файла данных при запуске по умолчанию (включено)
+	defaultListenAddr    = ":8080"                                     // Адрес для прослушивания по умолчанию (:8080)
+	defaultStoreInterval = 300                                         // Интервал сохранения данных по умолчанию (в секундах)
+	defaultFileStorePath = "/__w/metrics/metrics/metrics-storage.json" // Путь к файлу хранения метрик по умолчанию
+	defaultRestore       = true                                        // Флаг загрузки файла данных при запуске по умолчанию (включено)
 )
 
 // Config Структура для хранения конфигурации
