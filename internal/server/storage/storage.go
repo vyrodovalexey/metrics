@@ -2,24 +2,23 @@ package storage
 
 import (
 	"github.com/vyrodovalexey/metrics/internal/model"
-	"os"
 )
 
 type Storage interface {
 	// New Создание нового хранилища
-	New()
+	NewMemStorage(filePath string, interval uint) error
 	// NewDatabaseConnection Создание соединения с базой данных
 	//NewDatabaseConnection(c string) (pgx.Conn, error)
 	// CheckDatabaseConnection Проверка соединения с базой данных
 	//CheckDatabaseConnection() error
 	// Load Загрузка хранилища из файла
-	Load(f *os.File) error
+	LoadMemStorage(filePath string, interval uint) error
 	// UpdateGauge Добавление метрики Gauge
-	UpdateGauge(name string, item model.Gauge, f *os.File, p bool) error
+	UpdateGauge(name string, item model.Gauge) error
 	// UpdateCounter Добавление метрики Counter
-	UpdateCounter(name string, item model.Counter, f *os.File, p bool) error
+	UpdateCounter(name string, item model.Counter) error
 	// UpdateMetric Добавление метрики
-	UpdateMetric(metrics *model.Metrics, f *os.File, p bool) error
+	UpdateMetric(metrics *model.Metrics) error
 	// GetGauge Получение метрики Gauge
 	GetGauge(name string) (model.Gauge, bool)
 	// GetCounter Получение метрики Counter
@@ -29,7 +28,9 @@ type Storage interface {
 	// GetAllMetricNames Получение списка имен метрик
 	GetAllMetricNames() (map[string]string, map[string]string)
 	// SaveAsync Асинхронная сохранение данных хранилища в файл
-	SaveAsync(f *os.File, interval uint) error
+	SaveAsync() error
 	// Save Сохранение данных хранилища в файл
-	Save(f *os.File) error
+	Save() error
+
+	Close()
 }

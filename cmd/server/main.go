@@ -7,7 +7,6 @@ import (
 	"github.com/vyrodovalexey/metrics/internal/server/routing"
 	storage2 "github.com/vyrodovalexey/metrics/internal/server/storage"
 	"go.uber.org/zap"
-	"os"
 )
 
 const (
@@ -41,23 +40,12 @@ func main() {
 	//	}
 
 	// Инициализируем интерфейс и структуру хранения данных
-	var st storage2.Storage = &memstorage.MemStorage{}
-
-	// Открываем или создаем файл для хранения
-	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		// Логируем ошибку, если открытие/создание файла не удалось
-		lg.Panicw("Initializing file storage...",
-			"Error creating file:", err,
-		)
-		return
-	}
-	lg.Infow("File storage initialized")
+	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
 
 	// Проверяем, нужно ли загружать файл хранилища
 	// Если нет, инициализируем новое
 	if cfg.Restore {
-		err = st.Load(file)
+		err := st.LoadMemStorage(cfg.FileStoragePath, cfg.StoreInterval)
 		if err != nil {
 			// Логируем ошибку, если открытие/создание файла не удалось
 			lg.Panicw("Initializing file storage...",
@@ -66,31 +54,30 @@ func main() {
 			return
 		}
 	} else {
-		st.New()
+		// Логируем ошибку, если открытие/создание файла не удалось
+		err := st.NewMemStorage(cfg.FileStoragePath, cfg.StoreInterval)
+		lg.Panicw("Initializing file storage...",
+			"Error creating file:", err,
+		)
 	}
-
-	// Инициаоизация флага синхронной записи (AlwaysWriteFile)
-	var awf bool
+	lg.Infow("File storage initialized")
 
 	// При ассинхронном режиме запускаем фоновое сохранение структуры данных
 	// и назначение переменной owf
 	if cfg.StoreInterval > 0 {
-		awf = false
-		go st.SaveAsync(file, cfg.StoreInterval)
-	} else {
-		awf = true
+		go st.SaveAsync()
 	}
 
 	// Инициализируем маршрутизатор с хранилищем и логированием
 	r := routing.SetupRouter(lg)
 	// Настраиваем маршрутизацию
-	routing.ConfigureRouting(r, st, file, awf)
+	routing.ConfigureRouting(r, st)
 	// Загружаем HTML-шаблоны из указанной директории
 	r.LoadHTMLGlob("templates/*")
 	// Запускаем HTTP-сервер на заданном адресе
 	r.Run(cfg.ListenAddr)
 	// Сохраняем текущую структуру данных в файловое хранилище
-	err = st.Save(file)
+	err := st.Save()
 	if err != nil {
 		// Логируем ошибку, если открытие/создание файла не удалось
 		lg.Panicw("Saving data...",
@@ -98,6 +85,5 @@ func main() {
 		)
 		return
 	}
-	//	defer conn.Close(ctx)
-	defer file.Close()
+	st.Close()
 }

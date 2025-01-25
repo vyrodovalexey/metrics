@@ -8,7 +8,6 @@ import (
 	"github.com/vyrodovalexey/metrics/internal/server/storage"
 	"go.uber.org/zap"
 	"io"
-	"os"
 )
 
 func SetupRouter(log *zap.SugaredLogger) *gin.Engine {
@@ -24,12 +23,12 @@ func SetupRouter(log *zap.SugaredLogger) *gin.Engine {
 	return router
 }
 
-func ConfigureRouting(r *gin.Engine, st storage.Storage, f *os.File, p bool) {
+func ConfigureRouting(r *gin.Engine, st storage.Storage) {
 	// Определение эндпоинтов
 	//r.GET("/ping", handlers.CheckDatabaseConnection(st))
-	r.POST("/update/:type/:name/:value", handlers.UpdateFromURLPath(st, f, p))
+	r.POST("/update/:type/:name/:value", handlers.UpdateFromURLPath(st))
 	r.GET("/value/:type/:name", handlers.Get(st))
-	r.POST("/update/", handlers.UpdateFromBodyJSON(st, f, p))
+	r.POST("/update/", handlers.UpdateFromBodyJSON(st))
 	r.POST("/value/", handlers.GetBodyJSON(st))
 	r.GET("/", handlers.GetAllKeys(st))
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/vyrodovalexey/metrics/internal/model"
 	"github.com/vyrodovalexey/metrics/internal/server/storage"
 	"net/http"
-	"os"
 )
 
 const (
@@ -13,7 +12,7 @@ const (
 )
 
 // UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.
-func UpdateFromBodyJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
+func UpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get("Content-Type") != "application/json" {
@@ -37,7 +36,7 @@ func UpdateFromBodyJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc 
 				return
 			}
 			// Обновляем метрику в хранилище
-			err = st.UpdateMetric(m, f, p)
+			err = st.UpdateMetric(m)
 			// Если произошла ошибка при обновлении, возвращаем ошибку 500 Internal Server Error
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -55,7 +54,7 @@ func UpdateFromBodyJSON(st storage.Storage, f *os.File, p bool) gin.HandlerFunc 
 }
 
 // UpdateFromURLPath обновляет метрику из параметров URL.
-func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
+func UpdateFromURLPath(st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Создаем новую пустую метрику
 		m := &model.Metrics{}
@@ -67,7 +66,7 @@ func UpdateFromURLPath(st storage.Storage, f *os.File, p bool) gin.HandlerFunc {
 			return
 		}
 		// Обновляем метрику в хранилище
-		err = st.UpdateMetric(m, f, p)
+		err = st.UpdateMetric(m)
 		// Если произошла ошибка при обновлении, возвращаем ошибку 400
 		if err != nil {
 			c.String(http.StatusBadRequest, badrequest)

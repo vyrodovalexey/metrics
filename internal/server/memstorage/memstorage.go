@@ -15,47 +15,71 @@ type MemStorage struct {
 	CounterMap map[string]model.Counter
 }
 
+type MemStorageWithAttributes struct {
+	mst      MemStorage
+	f        *os.File
+	p        bool
+	interval uint
+}
+
 // New Создание нового хранилища
-func (m *MemStorage) New() {
-	m.GaugeMap = make(map[string]model.Gauge)
-	m.CounterMap = make(map[string]model.Counter)
+func (m *MemStorageWithAttributes) NewMemStorage(filePath string, interval uint) error {
+	var err error
+	m.mst.GaugeMap = make(map[string]model.Gauge)
+	m.mst.CounterMap = make(map[string]model.Counter)
+	// Открываем или создаем файл для хранения
+	m.f, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+
+	m.interval = interval
+	if interval > 0 {
+		m.p = true
+	} else {
+		m.p = false
+	}
+	return nil
 }
 
 // UpdateCounter Добавление метрики Counter
-func (m *MemStorage) UpdateCounter(name string, item model.Counter, f *os.File, p bool) error {
+func (m *MemStorageWithAttributes) UpdateCounter(name string, item model.Counter) error {
 	var err error
-	m.CounterMap[name] = m.CounterMap[name] + item // Увеличение значения счетчика
-	if p {
-		err = m.Save(f)
+	m.mst.CounterMap[name] = m.mst.CounterMap[name] + item // Увеличение значения счетчика
+	if m.p {
+		err = m.Save()
 	}
 	return err
 }
 
 // UpdateGauge Добавление метрики Gauge
-func (m *MemStorage) UpdateGauge(name string, item model.Gauge, f *os.File, p bool) error {
+func (m *MemStorageWithAttributes) UpdateGauge(name string, item model.Gauge) error {
 	var err error
-	m.GaugeMap[name] = item
-	if p {
-		err = m.Save(f)
+	m.mst.GaugeMap[name] = item
+	if m.p {
+		err = m.Save()
 	}
 	return err
 }
 
 // UpdateMetric Добавление метрики в формате model. Metrics
-func (m *MemStorage) UpdateMetric(metrics *model.Metrics, f *os.File, p bool) error {
+func (m *MemStorageWithAttributes) UpdateMetric(metrics *model.Metrics) error {
 	var err error
 	if metrics.MType == "counter" {
-		err = m.UpdateCounter(metrics.ID, *metrics.Delta, f, p)
+		err = m.UpdateCounter(metrics.ID, *metrics.Delta)
 	}
 	if metrics.MType == "gauge" {
-		err = m.UpdateGauge(metrics.ID, *metrics.Value, f, p)
+		err = m.UpdateGauge(metrics.ID, *metrics.Value)
 
+	}
+	if m.p {
+		err = m.Save()
 	}
 	return err
 }
 
 // GetMetric Получение метрики в формате model. Metrics
-func (m *MemStorage) GetMetric(metrics *model.Metrics) bool {
+func (m *MemStorageWithAttributes) GetMetric(metrics *model.Metrics) bool {
 
 	if metrics.MType == "counter" {
 		i, b := m.GetCounter(metrics.ID)
@@ -73,19 +97,19 @@ func (m *MemStorage) GetMetric(metrics *model.Metrics) bool {
 }
 
 // GetAllMetricNames Получение полного списка имен метрик
-func (m *MemStorage) GetAllMetricNames() (map[string]string, map[string]string) {
+func (m *MemStorageWithAttributes) GetAllMetricNames() (map[string]string, map[string]string) {
 	//to debug
 	//names := make([]string, 0, len(storage.GaugeMap)+len(storage.CounterMap))
-	gvalues := make(map[string]string, len(m.GaugeMap))
-	cvalues := make(map[string]string, len(m.CounterMap))
+	gvalues := make(map[string]string, len(m.mst.GaugeMap))
+	cvalues := make(map[string]string, len(m.mst.CounterMap))
 	// Перебор карты и сбор ключей
-	for name := range m.GaugeMap {
+	for name := range m.mst.GaugeMap {
 
 		gv, _ := m.GetGauge(name)             // Получение значения измерителя
 		gvalues[name] = fmt.Sprintf("%v", gv) // Форматирование значения измерителя
 	}
 
-	for name := range m.CounterMap {
+	for name := range m.mst.CounterMap {
 
 		cv, _ := m.GetCounter(name)           // Получение значения счетчика
 		cvalues[name] = fmt.Sprintf("%v", cv) // Форматирование значения счетчика
@@ -95,8 +119,8 @@ func (m *MemStorage) GetAllMetricNames() (map[string]string, map[string]string) 
 }
 
 // GetGauge Получение метрики Gauge
-func (m *MemStorage) GetGauge(name string) (model.Gauge, bool) {
-	res, e := m.GaugeMap[name]
+func (m *MemStorageWithAttributes) GetGauge(name string) (model.Gauge, bool) {
+	res, e := m.mst.GaugeMap[name]
 	if e {
 		return res, e
 	}
@@ -104,8 +128,8 @@ func (m *MemStorage) GetGauge(name string) (model.Gauge, bool) {
 }
 
 // GetCounter Получение метрики Counter
-func (m *MemStorage) GetCounter(name string) (model.Counter, bool) {
-	res, e := m.CounterMap[name]
+func (m *MemStorageWithAttributes) GetCounter(name string) (model.Counter, bool) {
+	res, e := m.mst.CounterMap[name]
 	if e {
 		return res, e
 	}
@@ -113,12 +137,12 @@ func (m *MemStorage) GetCounter(name string) (model.Counter, bool) {
 }
 
 // Load Загрузка данных хранилища метрик из файла
-func (m *MemStorage) Load(f *os.File) error {
+func (m *MemStorageWithAttributes) LoadMemStorage(filePath string, interval uint) error {
 	var err error
 	var byteValue []byte
-	m.New() // Создание нового хранилища
+	m.NewMemStorage(filePath, interval) // Создание нового хранилища
 	// Чтение содержимого файла
-	byteValue, err = io.ReadAll(f)
+	byteValue, err = io.ReadAll(m.f)
 	if err != nil {
 		return err
 	}
@@ -132,51 +156,56 @@ func (m *MemStorage) Load(f *os.File) error {
 }
 
 // SaveAsync Асинхронное сохранение данных хранилища метрик в файл
-func (m *MemStorage) SaveAsync(f *os.File, interval uint) error {
+func (m *MemStorageWithAttributes) SaveAsync() error {
 	for {
-		mst, err := json.Marshal(m)
+		mst, err := json.Marshal(m.mst)
 		if err != nil {
 			return err
 		}
 
 		// Очистка файла
-		err = f.Truncate(0)
+		err = m.f.Truncate(0)
 		if err != nil {
 			return err
 		}
-		_, err = f.Seek(0, 0) // Перемещение курсора в начало файла
+		_, err = m.f.Seek(0, 0) // Перемещение курсора в начало файла
 		if err != nil {
 			return err
 		}
-		_, err = f.Write(mst) // Запись данных хранилища метрик в файл
+		_, err = m.f.Write(mst) // Запись данных хранилища метрик в файл
 		if err != nil {
 			return err
 		}
 		// Интервал ожидания
-		<-time.After(time.Duration(interval) * time.Second)
+		<-time.After(time.Duration(m.interval) * time.Second)
 	}
 }
 
 // Save Сохранение хранилища в файл
-func (m *MemStorage) Save(f *os.File) error {
+func (m *MemStorageWithAttributes) Save() error {
 	var err error
 	var mst []byte
-	mst, err = json.Marshal(m)
+	mst, err = json.Marshal(m.mst)
 	if err != nil {
 		return err
 	}
 	// Очистка файла
-	err = f.Truncate(0)
+	err = m.f.Truncate(0)
 	if err != nil {
 		return err
 	}
-	_, err = f.Seek(0, 0) // Перемещение курсора в начало файла
+	_, err = m.f.Seek(0, 0) // Перемещение курсора в начало файла
 	if err != nil {
 		return err
 	}
-	_, err = f.Write(mst) // Запись данных хранилища метрик в файл
+	_, err = m.f.Write(mst) // Запись данных хранилища метрик в файл
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (m *MemStorageWithAttributes) Close() {
+	//	defer conn.Close(ctx)
+	defer m.f.Close()
 }
