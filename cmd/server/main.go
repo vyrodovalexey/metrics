@@ -7,6 +7,7 @@ import (
 	"github.com/vyrodovalexey/metrics/internal/server/routing"
 	storage2 "github.com/vyrodovalexey/metrics/internal/server/storage"
 	"go.uber.org/zap"
+	"os"
 )
 
 const (
@@ -41,6 +42,16 @@ func main() {
 
 	// Инициализируем интерфейс и структуру хранения данных
 	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
+	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		// Логируем ошибку, если открытие/создание файла не удалось
+		lg.Panicw("Initializing file storage...",
+			"Error creating file:", err,
+		)
+		return
+	}
+	lg.Infow("File storage initialized")
+	defer file.Close()
 
 	// Проверяем, нужно ли загружать файл хранилища
 	// Если нет, инициализируем новое
