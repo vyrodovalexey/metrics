@@ -147,7 +147,7 @@ func (m *MemStorageWithAttributes) LoadMemStorage(filePath string, interval uint
 		return err
 	}
 	if len(byteValue) > 0 {
-		err = json.Unmarshal(byteValue, m)
+		err = json.Unmarshal(byteValue, &m.mst)
 		if err != nil {
 			return err
 		}
