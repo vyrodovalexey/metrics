@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"github.com/vyrodovalexey/metrics/internal/model"
 )
 
@@ -8,9 +9,9 @@ type Storage interface {
 	// New Создание нового хранилища
 	NewMemStorage(filePath string, interval uint) error
 	// NewDatabaseConnection Создание соединения с базой данных
-	//NewDatabaseConnection(c string) (pgx.Conn, error)
+	NewDatabaseConnection(ctx context.Context, c string) error
 	// CheckDatabaseConnection Проверка соединения с базой данных
-	//CheckDatabaseConnection() error
+	CheckDatabaseConnection(ctx context.Context) error
 	// Load Загрузка хранилища из файла
 	LoadMemStorage(filePath string, interval uint) error
 	// UpdateGauge Добавление метрики Gauge

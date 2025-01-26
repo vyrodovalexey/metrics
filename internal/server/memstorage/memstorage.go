@@ -1,8 +1,10 @@
 package memstorage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v4"
 	"github.com/vyrodovalexey/metrics/internal/model"
 	"io"
 	"os"
@@ -20,6 +22,18 @@ type MemStorageWithAttributes struct {
 	f        *os.File
 	p        bool
 	interval uint
+	conn     *pgx.Conn
+}
+
+func (m *MemStorageWithAttributes) NewDatabaseConnection(ctx context.Context, c string) error {
+	var err error
+	m.conn, err = pgx.Connect(ctx, c)
+	return err
+}
+
+func (m *MemStorageWithAttributes) CheckDatabaseConnection(ctx context.Context) error {
+	err := m.conn.Ping(ctx)
+	return err
 }
 
 // New Создание нового хранилища

@@ -1,6 +1,7 @@
 package routing
 
 import (
+	"context"
 	"github.com/gin-gonic/contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/vyrodovalexey/metrics/internal/server/handlers"
@@ -23,12 +24,12 @@ func SetupRouter(log *zap.SugaredLogger) *gin.Engine {
 	return router
 }
 
-func ConfigureRouting(r *gin.Engine, st storage.Storage) {
+func ConfigureRouting(r *gin.Engine, st storage.Storage, ctx context.Context) {
 	// Определение эндпоинтов
-	//r.GET("/ping", handlers.CheckDatabaseConnection(st))
 	r.POST("/update/:type/:name/:value", handlers.UpdateFromURLPath(st))
 	r.GET("/value/:type/:name", handlers.Get(st))
 	r.POST("/update/", handlers.UpdateFromBodyJSON(st))
 	r.POST("/value/", handlers.GetBodyJSON(st))
+	r.GET("/ping", handlers.CheckDatabaseConnection(ctx, st))
 	r.GET("/", handlers.GetAllKeys(st))
 }

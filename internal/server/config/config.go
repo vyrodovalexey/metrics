@@ -5,6 +5,7 @@ const (
 	defaultStoreInterval = 300                         // Интервал сохранения данных по умолчанию (в секундах)
 	defaultFileStorePath = "/tmp/metrics-storage.json" // Путь к файлу хранения метрик по умолчанию
 	defaultRestore       = true                        // Флаг загрузки файла данных при запуске по умолчанию (включено)
+	defaultDatabaseDSN   = ""                          // Строка подключения к базе данных по умолчанию (пустая строка)
 )
 
 // Config Структура для хранения конфигурации
@@ -23,6 +24,6 @@ func New() *Config {
 		defaultStoreInterval,
 		defaultFileStorePath,
 		defaultRestore,
-		"",
+		defaultDatabaseDSN,
 	}
 }
