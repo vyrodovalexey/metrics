@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jackc/pgx/v4"
 	"github.com/vyrodovalexey/metrics/internal/model"
 	"io"
 	"os"
@@ -22,22 +21,10 @@ type MemStorageWithAttributes struct {
 	f        *os.File
 	p        bool
 	interval uint
-	conn     *pgx.Conn
-}
-
-func (m *MemStorageWithAttributes) NewDatabaseConnection(ctx context.Context, c string) error {
-	var err error
-	m.conn, err = pgx.Connect(ctx, c)
-	return err
-}
-
-func (m *MemStorageWithAttributes) CheckDatabaseConnection(ctx context.Context) error {
-	err := m.conn.Ping(ctx)
-	return err
 }
 
 // New Создание нового хранилища
-func (m *MemStorageWithAttributes) NewMemStorage(filePath string, interval uint) error {
+func (m *MemStorageWithAttributes) New(ctx context.Context, filePath string, interval uint) error {
 	var err error
 	m.mst.GaugeMap = make(map[string]model.Gauge)
 	m.mst.CounterMap = make(map[string]model.Counter)
@@ -57,7 +44,7 @@ func (m *MemStorageWithAttributes) NewMemStorage(filePath string, interval uint)
 }
 
 // UpdateCounter Добавление метрики Counter
-func (m *MemStorageWithAttributes) UpdateCounter(name string, item model.Counter) error {
+func (m *MemStorageWithAttributes) UpdateCounter(ctx context.Context, name string, item model.Counter) error {
 	var err error
 	m.mst.CounterMap[name] = m.mst.CounterMap[name] + item // Увеличение значения счетчика
 	if m.p {
@@ -67,7 +54,7 @@ func (m *MemStorageWithAttributes) UpdateCounter(name string, item model.Counter
 }
 
 // UpdateGauge Добавление метрики Gauge
-func (m *MemStorageWithAttributes) UpdateGauge(name string, item model.Gauge) error {
+func (m *MemStorageWithAttributes) UpdateGauge(ctx context.Context, name string, item model.Gauge) error {
 	var err error
 	m.mst.GaugeMap[name] = item
 	if m.p {
@@ -77,13 +64,13 @@ func (m *MemStorageWithAttributes) UpdateGauge(name string, item model.Gauge) er
 }
 
 // UpdateMetric Добавление метрики в формате model. Metrics
-func (m *MemStorageWithAttributes) UpdateMetric(metrics *model.Metrics) error {
+func (m *MemStorageWithAttributes) UpdateMetric(ctx context.Context, metrics *model.Metrics) error {
 	var err error
 	if metrics.MType == "counter" {
-		err = m.UpdateCounter(metrics.ID, *metrics.Delta)
+		err = m.UpdateCounter(ctx, metrics.ID, *metrics.Delta)
 	}
 	if metrics.MType == "gauge" {
-		err = m.UpdateGauge(metrics.ID, *metrics.Value)
+		err = m.UpdateGauge(ctx, metrics.ID, *metrics.Value)
 
 	}
 	if m.p {
@@ -93,16 +80,16 @@ func (m *MemStorageWithAttributes) UpdateMetric(metrics *model.Metrics) error {
 }
 
 // GetMetric Получение метрики в формате model. Metrics
-func (m *MemStorageWithAttributes) GetMetric(metrics *model.Metrics) bool {
+func (m *MemStorageWithAttributes) GetMetric(ctx context.Context, metrics *model.Metrics) bool {
 
 	if metrics.MType == "counter" {
-		i, b := m.GetCounter(metrics.ID)
+		i, b := m.GetCounter(ctx, metrics.ID)
 		metrics.Delta = &i
 		metrics.Value = nil
 		return b
 	}
 	if metrics.MType == "gauge" {
-		g, b := m.GetGauge(metrics.ID)
+		g, b := m.GetGauge(ctx, metrics.ID)
 		metrics.Value = &g
 		metrics.Delta = nil
 		return b
@@ -111,7 +98,7 @@ func (m *MemStorageWithAttributes) GetMetric(metrics *model.Metrics) bool {
 }
 
 // GetAllMetricNames Получение полного списка имен метрик
-func (m *MemStorageWithAttributes) GetAllMetricNames() (map[string]string, map[string]string) {
+func (m *MemStorageWithAttributes) GetAllMetricNames(ctx context.Context) (map[string]string, map[string]string, error) {
 	//to debug
 	//names := make([]string, 0, len(storage.GaugeMap)+len(storage.CounterMap))
 	gvalues := make(map[string]string, len(m.mst.GaugeMap))
@@ -119,21 +106,21 @@ func (m *MemStorageWithAttributes) GetAllMetricNames() (map[string]string, map[s
 	// Перебор карты и сбор ключей
 	for name := range m.mst.GaugeMap {
 
-		gv, _ := m.GetGauge(name)             // Получение значения измерителя
+		gv, _ := m.GetGauge(ctx, name)        // Получение значения измерителя
 		gvalues[name] = fmt.Sprintf("%v", gv) // Форматирование значения измерителя
 	}
 
 	for name := range m.mst.CounterMap {
 
-		cv, _ := m.GetCounter(name)           // Получение значения счетчика
+		cv, _ := m.GetCounter(ctx, name)      // Получение значения счетчика
 		cvalues[name] = fmt.Sprintf("%v", cv) // Форматирование значения счетчика
 	}
 
-	return gvalues, cvalues
+	return gvalues, cvalues, nil
 }
 
 // GetGauge Получение метрики Gauge
-func (m *MemStorageWithAttributes) GetGauge(name string) (model.Gauge, bool) {
+func (m *MemStorageWithAttributes) GetGauge(ctx context.Context, name string) (model.Gauge, bool) {
 	res, e := m.mst.GaugeMap[name]
 	if e {
 		return res, e
@@ -142,7 +129,7 @@ func (m *MemStorageWithAttributes) GetGauge(name string) (model.Gauge, bool) {
 }
 
 // GetCounter Получение метрики Counter
-func (m *MemStorageWithAttributes) GetCounter(name string) (model.Counter, bool) {
+func (m *MemStorageWithAttributes) GetCounter(ctx context.Context, name string) (model.Counter, bool) {
 	res, e := m.mst.CounterMap[name]
 	if e {
 		return res, e
@@ -151,10 +138,10 @@ func (m *MemStorageWithAttributes) GetCounter(name string) (model.Counter, bool)
 }
 
 // Load Загрузка данных хранилища метрик из файла
-func (m *MemStorageWithAttributes) LoadMemStorage(filePath string, interval uint) error {
+func (m *MemStorageWithAttributes) Load(ctx context.Context, filePath string, interval uint) error {
 	var err error
 	var byteValue []byte
-	m.NewMemStorage(filePath, interval) // Создание нового хранилища
+	m.New(ctx, filePath, interval) // Создание нового хранилища
 	// Чтение содержимого файла
 	byteValue, err = io.ReadAll(m.f)
 	if err != nil {
@@ -219,7 +206,12 @@ func (m *MemStorageWithAttributes) Save() error {
 	return nil
 }
 
+// Check Проверка Dummy
+func (m *MemStorageWithAttributes) Check(ctx context.Context) error {
+	return nil
+}
+
+// Close Закрытие файла
 func (m *MemStorageWithAttributes) Close() {
-	//	defer conn.Close(ctx)
 	defer m.f.Close()
 }

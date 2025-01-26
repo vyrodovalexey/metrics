@@ -14,7 +14,7 @@ const (
 )
 
 // UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.
-func UpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
+func UpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get("Content-Type") != "application/json" {
@@ -38,7 +38,7 @@ func UpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 				return
 			}
 			// Обновляем метрику в хранилище
-			err = st.UpdateMetric(m)
+			err = st.UpdateMetric(ctx, m)
 			// Если произошла ошибка при обновлении, возвращаем ошибку 500 Internal Server Error
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -47,7 +47,7 @@ func UpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 				return
 			}
 			// Получаем обновленную метрику из хранилища
-			st.GetMetric(m)
+			st.GetMetric(ctx, m)
 			// Возвращаем обновленную метрику клиенту с кодом 200 OK
 			c.JSON(http.StatusOK, m)
 			return
@@ -56,7 +56,7 @@ func UpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 }
 
 // UpdateFromURLPath обновляет метрику из параметров URL.
-func UpdateFromURLPath(st storage.Storage) gin.HandlerFunc {
+func UpdateFromURLPath(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Создаем новую пустую метрику
 		m := &model.Metrics{}
@@ -68,14 +68,14 @@ func UpdateFromURLPath(st storage.Storage) gin.HandlerFunc {
 			return
 		}
 		// Обновляем метрику в хранилище
-		err = st.UpdateMetric(m)
+		err = st.UpdateMetric(ctx, m)
 		// Если произошла ошибка при обновлении, возвращаем ошибку 400
 		if err != nil {
 			c.String(http.StatusBadRequest, badrequest)
 			return
 		}
 		// Получаем обновленную метрику из хранилища
-		st.GetMetric(m)
+		st.GetMetric(ctx, m)
 		// Возвращаем обновленную метрику клиенту с кодом 200 OK
 		c.String(http.StatusOK, m.PrintMetric())
 	}
@@ -84,7 +84,7 @@ func UpdateFromURLPath(st storage.Storage) gin.HandlerFunc {
 // CheckDatabaseConnection проверяет соединение с базой данных.
 func CheckDatabaseConnection(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		err := st.CheckDatabaseConnection(ctx)
+		err := st.Check(ctx)
 		if err != nil {
 			c.String(http.StatusInternalServerError, fmt.Sprintf("error: %v", err))
 		}
@@ -93,7 +93,7 @@ func CheckDatabaseConnection(ctx context.Context, st storage.Storage) gin.Handle
 }
 
 // Get возвращает метрику по ее имени.
-func Get(st storage.Storage) gin.HandlerFunc {
+func Get(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Создаем новую пустую метрику
 		m := &model.Metrics{}
@@ -105,7 +105,7 @@ func Get(st storage.Storage) gin.HandlerFunc {
 			return
 		}
 		// Получаем метрику из хранилища
-		b := st.GetMetric(m)
+		b := st.GetMetric(ctx, m)
 		// Если метрика не найдена, возвращаем ошибку 404 Not Found
 		if !b {
 			c.String(http.StatusNotFound, badrequest)
@@ -118,7 +118,7 @@ func Get(st storage.Storage) gin.HandlerFunc {
 }
 
 // GetBodyJSON возвращает метрику из тела запроса в формате JSON.
-func GetBodyJSON(st storage.Storage) gin.HandlerFunc {
+func GetBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get("Content-Type") != "application/json" {
@@ -142,7 +142,7 @@ func GetBodyJSON(st storage.Storage) gin.HandlerFunc {
 				return
 			}
 			// Получаем метрику из хранилища
-			b := st.GetMetric(m)
+			b := st.GetMetric(ctx, m)
 			// Если метрика не найдена, возвращаем ошибку 404 Not Found
 			if !b {
 				c.JSON(http.StatusNotFound, gin.H{
@@ -158,10 +158,13 @@ func GetBodyJSON(st storage.Storage) gin.HandlerFunc {
 }
 
 // GetAllKeys возвращает все ключи метрик.
-func GetAllKeys(st storage.Storage) gin.HandlerFunc {
+func GetAllKeys(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Получаем все ключи метрик из хранилища
-		gval, cval := st.GetAllMetricNames()
+		gval, cval, err := st.GetAllMetricNames(ctx)
+		if err != nil {
+			c.String(http.StatusInternalServerError, fmt.Sprintf("error: %v", err))
+		}
 		// Возвращаем ключи метрик клиенту с кодом 200 OK
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
 			"Title":         "Metric Names",

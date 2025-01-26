@@ -7,27 +7,25 @@ import (
 
 type Storage interface {
 	// New Создание нового хранилища
-	NewMemStorage(filePath string, interval uint) error
+	New(ctx context.Context, filePath string, interval uint) error
 	// NewDatabaseConnection Создание соединения с базой данных
-	NewDatabaseConnection(ctx context.Context, c string) error
-	// CheckDatabaseConnection Проверка соединения с базой данных
-	CheckDatabaseConnection(ctx context.Context) error
+	Check(ctx context.Context) error
 	// Load Загрузка хранилища из файла
-	LoadMemStorage(filePath string, interval uint) error
+	Load(ctx context.Context, filePath string, interval uint) error
 	// UpdateGauge Добавление метрики Gauge
-	UpdateGauge(name string, item model.Gauge) error
+	UpdateGauge(ctx context.Context, name string, item model.Gauge) error
 	// UpdateCounter Добавление метрики Counter
-	UpdateCounter(name string, item model.Counter) error
+	UpdateCounter(ctx context.Context, name string, item model.Counter) error
 	// UpdateMetric Добавление метрики
-	UpdateMetric(metrics *model.Metrics) error
+	UpdateMetric(ctx context.Context, metrics *model.Metrics) error
 	// GetGauge Получение метрики Gauge
-	GetGauge(name string) (model.Gauge, bool)
+	GetGauge(ctx context.Context, name string) (model.Gauge, bool)
 	// GetCounter Получение метрики Counter
-	GetCounter(name string) (model.Counter, bool)
+	GetCounter(ctx context.Context, name string) (model.Counter, bool)
 	// GetMetric Получение метрики
-	GetMetric(metrics *model.Metrics) bool
+	GetMetric(ctx context.Context, metrics *model.Metrics) bool
 	// GetAllMetricNames Получение списка имен метрик
-	GetAllMetricNames() (map[string]string, map[string]string)
+	GetAllMetricNames(ctx context.Context) (map[string]string, map[string]string, error)
 	// SaveAsync Асинхронная сохранение данных хранилища в файл
 	SaveAsync() error
 	// Save Сохранение данных хранилища в файл

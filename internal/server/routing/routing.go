@@ -24,12 +24,12 @@ func SetupRouter(log *zap.SugaredLogger) *gin.Engine {
 	return router
 }
 
-func ConfigureRouting(r *gin.Engine, st storage.Storage, ctx context.Context) {
+func ConfigureRouting(ctx context.Context, r *gin.Engine, st storage.Storage) {
 	// Определение эндпоинтов
-	r.POST("/update/:type/:name/:value", handlers.UpdateFromURLPath(st))
-	r.GET("/value/:type/:name", handlers.Get(st))
-	r.POST("/update/", handlers.UpdateFromBodyJSON(st))
-	r.POST("/value/", handlers.GetBodyJSON(st))
+	r.POST("/update/:type/:name/:value", handlers.UpdateFromURLPath(ctx, st))
+	r.GET("/value/:type/:name", handlers.Get(ctx, st))
+	r.POST("/update/", handlers.UpdateFromBodyJSON(ctx, st))
+	r.POST("/value/", handlers.GetBodyJSON(ctx, st))
 	r.GET("/ping", handlers.CheckDatabaseConnection(ctx, st))
-	r.GET("/", handlers.GetAllKeys(st))
+	r.GET("/", handlers.GetAllKeys(ctx, st))
 }
