@@ -180,6 +180,6 @@ func (p *PgStorageWithAttributes) Save() error {
 }
 
 // Close Закрытие сессии
-func (m *PgStorageWithAttributes) Close() {
-	m.conn.Close(context.Background())
+func (p *PgStorageWithAttributes) Close() {
+	p.conn.Close(context.Background())
 }
