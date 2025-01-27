@@ -18,6 +18,8 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"`                             // Значение метрики в случае передачи gauge
 }
 
+type MetricsBatch []Metrics
+
 // URLPathToMetric парсит параметры URL и заполняет структуру Metrics.
 func (mod *Metrics) URLPathToMetric(mtype string, key string, value string) error {
 	var err error
@@ -65,6 +67,7 @@ func (mod *Metrics) BodyToMetric(body *io.ReadCloser) error {
 		return err
 	}
 	// Проверяем тип метрики
+
 	switch mod.MType {
 	case "gauge":
 		err = nil
@@ -75,7 +78,31 @@ func (mod *Metrics) BodyToMetric(body *io.ReadCloser) error {
 	default:
 		// Если тип метрики не gauge и не counter, возвращаем ошибку
 		err = fmt.Errorf("unknown metric type: %s", mod.MType)
+	}
 
+	return err
+}
+
+func (batch *MetricsBatch) BodyToMetricBatch(body *io.ReadCloser) error {
+	var err error
+	// Декодируем JSON из тела запроса в структуру Metrics
+	err = json.NewDecoder(*body).Decode(batch)
+	if err != nil {
+		return err
+	}
+	for i := range *batch {
+		// Проверяем тип метрики
+		switch (*batch)[i].MType {
+		case "gauge":
+			err = nil
+
+		case "counter":
+			err = nil
+
+		default:
+			// Если тип метрики не gauge и не counter, возвращаем ошибку
+			err = fmt.Errorf("unknown metric type: %s, for metric id %s", (*batch)[i].MType, (*batch)[i].ID)
+		}
 	}
 	return err
 }

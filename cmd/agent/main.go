@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	maxIdleConnectionsPerHost = 10   // Максимальное количество неактивных соединений на хост
-	requestTimeout            = 30   // Таймаут запроса в секундах
-	sendJSON                  = true // Флаг для отправки данных в формате JSON
+	maxIdleConnectionsPerHost = 10    // Максимальное количество неактивных соединений на хост
+	requestTimeout            = 30    // Таймаут запроса в секундах
+	sendJSON                  = false // Флаг для отправки данных в формате JSON
 )
 
 // Функция для создания HTTP клиента
@@ -39,6 +39,7 @@ func main() {
 	client := httpClient()
 	// Инициализируем структуру метрик
 	m := scribemetrics.MemMetrics{}
+
 	// Костыль - переменная для хранения типа метрики
 	var metricSetup string
 
@@ -51,6 +52,8 @@ func main() {
 		if m.PollCount > 0 {
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
+			// Инициализируем структуру для метрик в виде batch
+			batch := make(model.MetricsBatch, val.NumField())
 			for i := 0; i < val.NumField(); i++ {
 				met.ID = typ.Field(i).Name
 				// Костыль - Настройка типа метрики
@@ -66,8 +69,10 @@ func main() {
 					sfloat := val.Field(i).Float()
 					met.Value = &sfloat
 				}
-				// Выбираем отправку в формате JSON или plaintext
-				if sendJSON {
+				// Выбираем отправку в формате BatchJSON, JSON или plaintext
+				if cfg.BatchMode {
+					batch[i] = met
+				} else if sendJSON {
 					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
 					sendmetrics.SendAsJSON(client, r, &met)
 				} else {
@@ -75,7 +80,11 @@ func main() {
 					sendmetrics.SendAsPlain(client, r)
 				}
 			}
-			<-time.After(time.Duration(cfg.ReportInterval) * time.Second)
+			if cfg.BatchMode {
+				r := fmt.Sprintf("http://%s/updates/", cfg.EndpointAddr)
+				sendmetrics.SendAsBatchJSON(client, r, &batch)
+			}
 		}
+		<-time.After(time.Duration(cfg.ReportInterval) * time.Second)
 	}
 }

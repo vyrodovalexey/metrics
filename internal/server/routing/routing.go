@@ -29,6 +29,7 @@ func ConfigureRouting(ctx context.Context, r *gin.Engine, st storage.Storage) {
 	r.POST("/update/:type/:name/:value", handlers.UpdateFromURLPath(ctx, st))
 	r.GET("/value/:type/:name", handlers.Get(ctx, st))
 	r.POST("/update/", handlers.UpdateFromBodyJSON(ctx, st))
+	r.POST("/updates/", handlers.BatchUpdateFromBodyJSON(ctx, st))
 	r.POST("/value/", handlers.GetBodyJSON(ctx, st))
 	r.GET("/ping", handlers.CheckDatabaseConnection(ctx, st))
 	r.GET("/", handlers.GetAllKeys(ctx, st))

@@ -10,14 +10,19 @@ import (
 )
 
 const (
-	badrequest = "Bad Request"
+	badrequest           = "Bad Request"
+	ContentType          = "Content-Type"
+	ContentEncoding      = "Content-Encoding"
+	ContentTypeTextPlain = "text/plain"
+	ContentTypeJson      = "application/json"
+	EncodingGzip         = "gzip"
 )
 
 // UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.
 func UpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
-		if c.Request.Header.Get("Content-Type") != "application/json" {
+		if c.Request.Header.Get(ContentType) != ContentTypeJson {
 			// Если нет, возвращаем ошибку 415 Unsupported Media Type
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
@@ -50,6 +55,50 @@ func UpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc
 			st.GetMetric(ctx, m)
 			// Возвращаем обновленную метрику клиенту с кодом 200 OK
 			c.JSON(http.StatusOK, m)
+			return
+		}
+	}
+}
+
+// UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.
+func BatchUpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Проверяем, что Content-Type запроса - application/json
+		if c.Request.Header.Get(ContentType) != ContentTypeJson {
+			// Если нет, возвращаем ошибку 415 Unsupported Media Type
+			c.JSON(http.StatusUnsupportedMediaType, gin.H{
+				"error": badrequest,
+			})
+			return
+		} else {
+			// Создаем новую пустую метрику
+			b := &model.MetricsBatch{}
+			// Получаем тело запроса
+			body := c.Request.Body
+			// Парсим тело запроса в структуру Metrics
+			err := b.BodyToMetricBatch(&body)
+			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": badrequest,
+				})
+				return
+			}
+			for i := range *b {
+				// Обновляем метрику в хранилище
+				err = st.UpdateMetric(ctx, &(*b)[i])
+				// Если произошла ошибка при обновлении, возвращаем ошибку 500 Internal Server Error
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{
+						"error": err,
+					})
+					return
+				}
+				// Получаем обновленную метрику из хранилища
+				st.GetMetric(ctx, &(*b)[i])
+				// Возвращаем обновленную метрику клиенту с кодом 200 OK
+				c.JSON(http.StatusOK, &(*b)[i])
+			}
 			return
 		}
 	}
@@ -121,7 +170,7 @@ func Get(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 func GetBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
-		if c.Request.Header.Get("Content-Type") != "application/json" {
+		if c.Request.Header.Get(ContentType) != ContentTypeJson {
 			// Если нет, возвращаем ошибку 415 Unsupported Media Type
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
