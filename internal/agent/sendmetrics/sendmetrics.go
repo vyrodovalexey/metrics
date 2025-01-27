@@ -16,7 +16,7 @@ const (
 	ContentType          = "Content-Type"
 	ContentEncoding      = "Content-Encoding"
 	ContentTypeTextPlain = "text/plain"
-	ContentTypeJson      = "application/json"
+	ContentTypeJSON      = "application/json"
 	EncodingGzip         = "gzip"
 )
 
@@ -47,7 +47,7 @@ func SendAsJSON(cl *http.Client, url string, m *model.Metrics) {
 		log.Println(err) // Ошибка при создании запроса
 	}
 	// Установка типа контента запроса и кодировок
-	req.Header.Set(ContentType, ContentTypeJson)
+	req.Header.Set(ContentType, ContentTypeJSON)
 	req.Header.Set("Accept-Encoding", EncodingGzip)
 	req.Header.Set(ContentEncoding, EncodingGzip)
 	// Пытаемся отправить запрос
@@ -89,7 +89,7 @@ func SendAsBatchJSON(cl *http.Client, url string, b *model.MetricsBatch) {
 		log.Println(err) // Ошибка при создании запроса
 	}
 	// Установка типа контента запроса и кодировок
-	req.Header.Set(ContentType, ContentTypeJson)
+	req.Header.Set(ContentType, ContentTypeJSON)
 	req.Header.Set("Accept-Encoding", EncodingGzip)
 	req.Header.Set(ContentEncoding, EncodingGzip)
 	// Пытаемся отправить запрос

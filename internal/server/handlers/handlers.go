@@ -14,7 +14,7 @@ const (
 	ContentType          = "Content-Type"
 	ContentEncoding      = "Content-Encoding"
 	ContentTypeTextPlain = "text/plain"
-	ContentTypeJson      = "application/json"
+	ContentTypeJSON      = "application/json"
 	EncodingGzip         = "gzip"
 )
 
@@ -22,7 +22,7 @@ const (
 func UpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
-		if c.Request.Header.Get(ContentType) != ContentTypeJson {
+		if c.Request.Header.Get(ContentType) != ContentTypeJSON {
 			// Если нет, возвращаем ошибку 415 Unsupported Media Type
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
@@ -64,7 +64,7 @@ func UpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc
 func BatchUpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
-		if c.Request.Header.Get(ContentType) != ContentTypeJson {
+		if c.Request.Header.Get(ContentType) != ContentTypeJSON {
 			// Если нет, возвращаем ошибку 415 Unsupported Media Type
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
@@ -170,7 +170,7 @@ func Get(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 func GetBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
-		if c.Request.Header.Get(ContentType) != ContentTypeJson {
+		if c.Request.Header.Get(ContentType) != ContentTypeJSON {
 			// Если нет, возвращаем ошибку 415 Unsupported Media Type
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
 				"error": badrequest,
