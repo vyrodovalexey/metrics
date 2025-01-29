@@ -26,6 +26,9 @@ type MemStorageWithAttributes struct {
 // New Создание нового хранилища
 func (m *MemStorageWithAttributes) New(ctx context.Context, filePath string, interval uint) error {
 	var err error
+	if ctx.Err() != nil {
+		return fmt.Errorf("operation interapted")
+	}
 	m.mst.GaugeMap = make(map[string]model.Gauge)
 	m.mst.CounterMap = make(map[string]model.Counter)
 	// Открываем или создаем файл для хранения
@@ -221,7 +224,7 @@ func (m *MemStorageWithAttributes) Save() error {
 // Check Проверка Dummy
 func (m *MemStorageWithAttributes) Check(ctx context.Context) error {
 	if ctx.Err() != nil {
-		fmt.Errorf("operation interapted for method which not implemented for memory storage type")
+		return fmt.Errorf("operation interapted for method which not implemented for memory storage type")
 	}
 	return fmt.Errorf("method is not implemented for postgresql database storage type")
 }
