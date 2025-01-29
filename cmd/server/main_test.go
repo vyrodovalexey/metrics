@@ -3,9 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"github.com/bitcomplete/sqltestutil"
 	"github.com/vyrodovalexey/metrics/internal/server/config"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
 	"github.com/vyrodovalexey/metrics/internal/server/memstorage"
+	"github.com/vyrodovalexey/metrics/internal/server/pgstorage"
 	"github.com/vyrodovalexey/metrics/internal/server/routing"
 	storage2 "github.com/vyrodovalexey/metrics/internal/server/storage"
 	"go.uber.org/zap"
@@ -15,15 +18,17 @@ import (
 	"testing"
 )
 
+func TestConfig(t *testing.T) {
+	cfg := config.New()
+	ConfigParser(cfg)
+}
+
 func TestRequestsMemStorageSyncNew(t *testing.T) {
 	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
 	ctx := context.Background()
 	sugar := logging.NewLogging(zap.InfoLevel)
 	// Создаем новый экземпляр конфигурации
-	cfg := config.New()
-	ConfigParser(cfg)
-	cfg.StoreInterval = 0
-	err := st.New(ctx, cfg.FileStoragePath, cfg.StoreInterval)
+	err := st.New(ctx, "/tmp/metrics-storage.json", 0)
 	if err != nil {
 		t.Errorf("initializing file storage... Error: %v", err)
 	}
@@ -32,7 +37,7 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 	routing.ConfigureRouting(ctx, router, st)
 	router.LoadHTMLGlob("../../templates/*")
 
-	testsplain := []struct {
+	testsNew := []struct {
 		name           string
 		method         string
 		url            string
@@ -164,7 +169,7 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testsplain {
+	for _, tt := range testsNew {
 		t.Run(tt.name, func(t *testing.T) {
 			var body io.Reader
 			if tt.body == "" {
@@ -189,20 +194,15 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 
 		})
 	}
+	st.Close()
 
 }
 
-func TestRequestsPgStorage(t *testing.T) {
+func TestMemStorageSyncLoad(t *testing.T) {
 	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
 	ctx := context.Background()
 	sugar := logging.NewLogging(zap.InfoLevel)
-	// Создаем новый экземпляр конфигурации
-	cfg := config.New()
-	// Парсим настройки конфигурации
-	ConfigParser(cfg)
-	cfg.StoreInterval = 0
-	cfg.FileStoragePath = "../../test/data/metrics-storage.json"
-	err := st.Load(ctx, cfg.FileStoragePath, cfg.StoreInterval)
+	err := st.Load(ctx, "../../test/data/metrics-storage.json", 0)
 	if err != nil {
 		// Логируем ошибку, если открытие/создание файла не удалось
 		sugar.Panicw("Initializing file storage...",
@@ -215,7 +215,7 @@ func TestRequestsPgStorage(t *testing.T) {
 	routing.ConfigureRouting(ctx, router, st)
 	router.LoadHTMLGlob("../../templates/*")
 
-	testsplain := []struct {
+	testsLoad := []struct {
 		name           string
 		method         string
 		url            string
@@ -262,7 +262,7 @@ func TestRequestsPgStorage(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testsplain {
+	for _, tt := range testsLoad {
 		t.Run(tt.name, func(t *testing.T) {
 			var body io.Reader
 			if tt.body == "" {
@@ -287,5 +287,117 @@ func TestRequestsPgStorage(t *testing.T) {
 
 		})
 	}
+	st.Close()
+}
 
+func TestPgStorage(t *testing.T) {
+	ctx := context.Background()
+	pg, _ := sqltestutil.StartPostgresContainer(ctx, "14")
+	defer pg.Shutdown(ctx)
+
+	var st storage2.Storage = &pgstorage.PgStorageWithAttributes{}
+	fmt.Println(pg.ConnectionString())
+	sugar := logging.NewLogging(zap.InfoLevel)
+	err := st.New(ctx, pg.ConnectionString(), 0)
+
+	if err != nil {
+		// Логируем ошибку, если открытие/создание файла не удалось
+		sugar.Panicw("Connecting to database...",
+			"Error database connection:", err,
+		)
+		return
+	}
+	sugar.Infow("Connected to database")
+
+	router := routing.SetupRouter(sugar)
+	routing.ConfigureRouting(ctx, router, st)
+	router.LoadHTMLGlob("../../templates/*")
+
+	testsLoad := []struct {
+		name           string
+		method         string
+		url            string
+		mimetype       string
+		body           string
+		expectedStatus int
+		expectedValue  string
+	}{
+		{
+			name:           "Post Counter Json /update",
+			method:         http.MethodPost,
+			url:            "/update/",
+			mimetype:       "application/json",
+			body:           "{\"id\":\"PollCount\",\"type\":\"counter\",\"delta\":7}",
+			expectedStatus: http.StatusOK,
+			expectedValue:  "{\"id\":\"PollCount\",\"type\":\"counter\",\"delta\":7}",
+		},
+		{
+			name:           "Post Gauge Json /update",
+			method:         http.MethodPost,
+			url:            "/update/",
+			mimetype:       "application/json",
+			body:           "{\"id\":\"TestGauge\",\"type\":\"gauge\",\"value\":1.678}",
+			expectedStatus: http.StatusOK,
+			expectedValue:  "{\"id\":\"TestGauge\",\"type\":\"gauge\",\"value\":1.678}",
+		},
+		{
+			name:           "Post Counter Json /value",
+			method:         http.MethodPost,
+			url:            "/value/",
+			mimetype:       "application/json",
+			body:           "{\"id\":\"PollCount\",\"type\":\"counter\",\"delta\":8}",
+			expectedStatus: http.StatusOK,
+			expectedValue:  "{\"id\":\"PollCount\",\"type\":\"counter\",\"delta\":7}",
+		},
+		{
+			name:           "Post Gauge Json /value",
+			method:         http.MethodPost,
+			url:            "/value/",
+			mimetype:       "application/json",
+			body:           "{\"id\":\"TestGauge\",\"type\":\"gauge\"}",
+			expectedStatus: http.StatusOK,
+			expectedValue:  "{\"id\":\"TestGauge\",\"type\":\"gauge\",\"value\":1.678}",
+		},
+		{
+			name:           "Get /",
+			method:         http.MethodGet,
+			url:            "/",
+			mimetype:       "text/html",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Get /ping",
+			method:         http.MethodGet,
+			url:            "/ping",
+			mimetype:       "text/html",
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range testsLoad {
+		t.Run(tt.name, func(t *testing.T) {
+			var body io.Reader
+			if tt.body == "" {
+				body = nil
+			} else {
+				body = bytes.NewBuffer([]byte(tt.body))
+			}
+			req := httptest.NewRequest(tt.method, tt.url, body)
+			req.Header.Add("Content-Type", tt.mimetype)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			if tt.expectedValue != "" {
+				if w.Body.String() != tt.expectedValue {
+					t.Errorf("expected value %s, got %s", tt.expectedValue, w.Body.String())
+				} else {
+					t.Logf("expected value %s, got %s", tt.expectedValue, w.Body.String())
+				}
+			}
+			if w.Code != tt.expectedStatus {
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
+			}
+
+		})
+	}
+	st.Close()
 }

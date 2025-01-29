@@ -220,7 +220,10 @@ func (m *MemStorageWithAttributes) Save() error {
 
 // Check Проверка Dummy
 func (m *MemStorageWithAttributes) Check(ctx context.Context) error {
-	return nil
+	if ctx.Err() != nil {
+		fmt.Errorf("operation interapted for method which not implemented for memory storage type")
+	}
+	return fmt.Errorf("method is not implemented for postgresql database storage type")
 }
 
 // Close Закрытие файла
