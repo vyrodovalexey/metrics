@@ -50,6 +50,9 @@ func (m *MemStorageWithAttributes) UpdateCounter(ctx context.Context, name strin
 	if m.p {
 		err = m.Save()
 	}
+	if ctx.Err() != nil {
+		return nil
+	}
 	return err
 }
 
@@ -59,6 +62,9 @@ func (m *MemStorageWithAttributes) UpdateGauge(ctx context.Context, name string,
 	m.mst.GaugeMap[name] = item
 	if m.p {
 		err = m.Save()
+	}
+	if ctx.Err() != nil {
+		return nil
 	}
 	return err
 }
@@ -125,6 +131,9 @@ func (m *MemStorageWithAttributes) GetGauge(ctx context.Context, name string) (m
 	if e {
 		return res, e
 	}
+	if ctx.Err() != nil {
+		return 0, false
+	}
 	return 0, false
 }
 
@@ -133,6 +142,9 @@ func (m *MemStorageWithAttributes) GetCounter(ctx context.Context, name string) 
 	res, e := m.mst.CounterMap[name]
 	if e {
 		return res, e
+	}
+	if ctx.Err() != nil {
+		return 0, false
 	}
 	return 0, false
 }

@@ -10,12 +10,9 @@ import (
 )
 
 const (
-	badrequest           = "Bad Request"
-	ContentType          = "Content-Type"
-	ContentEncoding      = "Content-Encoding"
-	ContentTypeTextPlain = "text/plain"
-	ContentTypeJSON      = "application/json"
-	EncodingGzip         = "gzip"
+	badrequest      = "Bad Request"
+	ContentType     = "Content-Type"
+	ContentTypeJSON = "application/json"
 )
 
 // UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.

@@ -166,17 +166,20 @@ func (p *PgStorageWithAttributes) GetCounter(ctx context.Context, name string) (
 
 // Load Dummy
 func (p *PgStorageWithAttributes) Load(ctx context.Context, filePath string, interval uint) error {
-	return nil
+	if ctx.Err() != nil {
+		return fmt.Errorf("method is not implemented for postgresql database storage type with filepath %s and interval %d", filePath, interval)
+	}
+	return fmt.Errorf("method is not implemented for postgresql database storage type with filepath %s and interval %d", filePath, interval)
 }
 
 // SaveAsync Dummy
 func (p *PgStorageWithAttributes) SaveAsync() error {
-	return nil
+	return fmt.Errorf("method is not implemented for postgresql database storage type")
 }
 
-// Save Dummny
+// Save Dummy
 func (p *PgStorageWithAttributes) Save() error {
-	return nil
+	return fmt.Errorf("method is not implemented for postgresql database storage type")
 }
 
 // Close Закрытие сессии
