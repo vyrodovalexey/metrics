@@ -1,10 +1,16 @@
 package main
 
 import (
+	"github.com/vyrodovalexey/metrics/internal/agent/config"
 	"github.com/vyrodovalexey/metrics/internal/agent/scribemetrics"
 	"testing"
 	"time"
 )
+
+func TestConfig(t *testing.T) {
+	cfg := config.New()
+	ConfigParser(cfg)
+}
 
 func TestScribeMetrics(t *testing.T) {
 

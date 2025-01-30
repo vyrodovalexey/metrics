@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/model"
+	"go.uber.org/zap"
 	"io"
 	"os"
 	"time"
@@ -21,16 +22,18 @@ type MemStorageWithAttributes struct {
 	f        *os.File
 	p        bool
 	interval uint
+	lg       *zap.SugaredLogger
 }
 
 // New Создание нового хранилища
-func (m *MemStorageWithAttributes) New(ctx context.Context, filePath string, interval uint) error {
+func (m *MemStorageWithAttributes) New(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error {
 	var err error
 	if ctx.Err() != nil {
 		return fmt.Errorf("operation interapted")
 	}
 	m.mst.GaugeMap = make(map[string]model.Gauge)
 	m.mst.CounterMap = make(map[string]model.Counter)
+	m.lg = log
 	// Открываем или создаем файл для хранения
 	m.f, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
@@ -153,10 +156,13 @@ func (m *MemStorageWithAttributes) GetCounter(ctx context.Context, name string) 
 }
 
 // Load Загрузка данных хранилища метрик из файла
-func (m *MemStorageWithAttributes) Load(ctx context.Context, filePath string, interval uint) error {
+func (m *MemStorageWithAttributes) Load(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error {
 	var err error
 	var byteValue []byte
-	m.New(ctx, filePath, interval) // Создание нового хранилища
+	err = m.New(ctx, filePath, interval, log) // Создание нового хранилища
+	if err != nil {
+		return err
+	}
 	// Чтение содержимого файла
 	byteValue, err = io.ReadAll(m.f)
 	if err != nil {

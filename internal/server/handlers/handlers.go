@@ -133,8 +133,9 @@ func CheckDatabaseConnection(ctx context.Context, st storage.Storage) gin.Handle
 		err := st.Check(ctx)
 		if err != nil {
 			c.String(http.StatusInternalServerError, fmt.Sprintf("error: %v", err))
+		} else {
+			c.String(http.StatusOK, "ok")
 		}
-		c.String(http.StatusOK, "ok")
 	}
 }
 

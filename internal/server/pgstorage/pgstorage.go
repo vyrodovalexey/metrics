@@ -2,10 +2,15 @@ package pgstorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/vyrodovalexey/metrics/internal/model"
+	"go.uber.org/zap"
 	"log"
+	"time"
 )
 
 const (
@@ -24,20 +29,120 @@ const (
 type PgStorageWithAttributes struct {
 	conn    *pgx.Conn
 	timeout uint
+	lg      *zap.SugaredLogger
 }
 
-func (p *PgStorageWithAttributes) New(ctx context.Context, c string, timeout uint) error {
+func IsRetriableError(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case pgerrcode.ConnectionException, // General connection issue
+			pgerrcode.ConnectionDoesNotExist, // Connection does not exist
+			pgerrcode.ConnectionFailure,      // Failed to establish connection
+			pgerrcode.QueryCanceled:          // Query canceled (e.g., due to timeout)
+			return true // Retry these errors
+		default:
+			return false // Non-retriable errors
+		}
+	}
+	return false
+}
+
+func (p *PgStorageWithAttributes) connectDB(ctx context.Context, c string) error {
+
+	var err error
+
+	for i := 0; i <= 2; i++ {
+		p.lg.Infow("Connecting to database...")
+		p.conn, err = pgx.Connect(ctx, c)
+		if err != nil {
+			if IsRetriableError(err) {
+				p.lg.Infow("Database is not ready...")
+			}
+		} else {
+			p.lg.Infow("Connected to database")
+			return nil
+		}
+
+		if i == 0 {
+			<-time.After(1 * time.Second)
+		} else {
+			<-time.After(time.Duration(i*2+1) * time.Second)
+		}
+	}
+
+	p.lg.Panicw("Can't connect to database")
+	return err
+}
+
+func (p *PgStorageWithAttributes) pingDB(ctx context.Context) error {
+
+	var err error
+	timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+	for i := 0; i <= 2; i++ {
+		err = p.conn.Ping(timeoutCtx)
+		if err != nil {
+			p.lg.Infow("Database is not ready...")
+
+		} else {
+			p.lg.Infow("Database ping successful")
+			return nil
+		}
+
+		if i == 0 {
+			<-time.After(1 * time.Second)
+		} else {
+			<-time.After(time.Duration(i*2+1) * time.Second)
+		}
+	}
+
+	p.lg.Panicw("Can't connect to database")
+	return err
+}
+
+func (p *PgStorageWithAttributes) execDB(ctx context.Context, query string, args ...any) error {
+
+	var err error
+	err = p.pingDB(ctx)
+	if err != nil {
+		return err
+	}
+	for i := 0; i <= 2; i++ {
+
+		_, err = p.conn.Exec(ctx, query, args...)
+
+		if err != nil {
+			p.lg.Infow("Database is not ready...")
+		} else {
+			p.lg.Infof("Query %s executed", query)
+			return nil
+		}
+
+		if i == 0 {
+			<-time.After(1 * time.Second)
+		} else {
+			<-time.After(time.Duration(i*2+1) * time.Second)
+		}
+	}
+
+	p.lg.Infow("Can't connect to database")
+	return err
+}
+
+func (p *PgStorageWithAttributes) New(ctx context.Context, c string, timeout uint, log *zap.SugaredLogger) error {
 	var err error
 	p.timeout = timeout
-	p.conn, err = pgx.Connect(ctx, c)
+	p.lg = log
+	err = p.connectDB(ctx, c)
 	if err != nil {
 		return err
 	}
-	_, err = p.conn.Exec(ctx, QueryCreateGaugeTable)
+	err = p.execDB(ctx, QueryCreateGaugeTable)
 	if err != nil {
 		return err
 	}
-	_, err = p.conn.Exec(ctx, QueryCreateCounterTable)
+	err = p.execDB(ctx, QueryCreateCounterTable)
 	if err != nil {
 		return err
 	}
@@ -45,7 +150,7 @@ func (p *PgStorageWithAttributes) New(ctx context.Context, c string, timeout uin
 }
 
 func (p *PgStorageWithAttributes) Check(ctx context.Context) error {
-	err := p.conn.Ping(ctx)
+	err := p.pingDB(ctx)
 	return err
 }
 
@@ -54,9 +159,9 @@ func (p *PgStorageWithAttributes) UpdateCounter(ctx context.Context, name string
 	var err error
 	_, b := p.GetCounter(ctx, name)
 	if b {
-		_, err = p.conn.Exec(ctx, QueryUpdateCounter, name, item)
+		err = p.execDB(ctx, QueryUpdateCounter, name, item)
 	} else {
-		_, err = p.conn.Exec(ctx, QueryInsertCounter, name, item)
+		err = p.execDB(ctx, QueryInsertCounter, name, item)
 	}
 	return err
 }
@@ -66,9 +171,9 @@ func (p *PgStorageWithAttributes) UpdateGauge(ctx context.Context, name string, 
 	var err error
 	_, b := p.GetGauge(ctx, name)
 	if b {
-		_, err = p.conn.Exec(ctx, QueryUpdateGauge, name, item)
+		err = p.execDB(ctx, QueryUpdateGauge, name, item)
 	} else {
-		_, err = p.conn.Exec(ctx, QueryInsertGauge, name, item)
+		err = p.execDB(ctx, QueryInsertGauge, name, item)
 	}
 	return err
 }
@@ -111,6 +216,10 @@ func (p *PgStorageWithAttributes) GetAllMetricNames(ctx context.Context) (map[st
 	null := make(map[string]string)
 	gvalues := make(map[string]string)
 	cvalues := make(map[string]string)
+	err = p.pingDB(ctx)
+	if err != nil {
+		return null, null, err
+	}
 
 	gaugerows, err = p.conn.Query(ctx, QuerySelectAllGauge)
 	if err != nil {
@@ -147,7 +256,12 @@ func (p *PgStorageWithAttributes) GetAllMetricNames(ctx context.Context) (map[st
 // GetGauge Получение метрики Gauge
 func (p *PgStorageWithAttributes) GetGauge(ctx context.Context, name string) (model.Gauge, bool) {
 	var value model.Gauge
-	err := p.conn.QueryRow(ctx, QuerySelectGauge, name).Scan(&value)
+	var err error
+	err = p.pingDB(ctx)
+	if err != nil {
+		return 0, false
+	}
+	err = p.conn.QueryRow(ctx, QuerySelectGauge, name).Scan(&value)
 	if err != nil {
 		return 0, false
 	}
@@ -157,7 +271,12 @@ func (p *PgStorageWithAttributes) GetGauge(ctx context.Context, name string) (mo
 // GetCounter Получение метрики Counter
 func (p *PgStorageWithAttributes) GetCounter(ctx context.Context, name string) (model.Counter, bool) {
 	var value model.Counter
-	err := p.conn.QueryRow(ctx, QuerySelectCounter, name).Scan(&value)
+	var err error
+	err = p.pingDB(ctx)
+	if err != nil {
+		return 0, false
+	}
+	err = p.conn.QueryRow(ctx, QuerySelectCounter, name).Scan(&value)
 	if err != nil {
 		return 0, false
 	}
@@ -165,7 +284,7 @@ func (p *PgStorageWithAttributes) GetCounter(ctx context.Context, name string) (
 }
 
 // Load Dummy
-func (p *PgStorageWithAttributes) Load(ctx context.Context, filePath string, interval uint) error {
+func (p *PgStorageWithAttributes) Load(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error {
 	if ctx.Err() != nil {
 		return fmt.Errorf("operation interapted for method which implemented for postgresql database storage type with filepath %s and interval %d", filePath, interval)
 	}

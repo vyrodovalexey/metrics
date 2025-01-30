@@ -25,7 +25,7 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 	ctx := context.Background()
 	sugar := logging.NewLogging(zap.InfoLevel)
 	// Создаем новый экземпляр конфигурации
-	err := st.New(ctx, "/tmp/metrics-storage.json", 0)
+	err := st.New(ctx, "/tmp/metrics-storage.json", 0, sugar)
 	if err != nil {
 		t.Errorf("initializing file storage... Error: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestMemStorageSyncLoad(t *testing.T) {
 	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
 	ctx := context.Background()
 	sugar := logging.NewLogging(zap.InfoLevel)
-	err := st.Load(ctx, "../../test/data/metrics-storage.json", 0)
+	err := st.Load(ctx, "../../test/data/metrics-storage.json", 0, sugar)
 	if err != nil {
 		// Логируем ошибку, если открытие/создание файла не удалось
 		sugar.Panicw("Initializing file storage...",
@@ -296,7 +296,7 @@ func TestMemStorageSyncLoad(t *testing.T) {
 //	var st storage2.Storage = &pgstorage.PgStorageWithAttributes{}
 //	fmt.Println(pg.ConnectionString())
 //	sugar := logging.NewLogging(zap.InfoLevel)
-//	err := st.New(ctx, pg.ConnectionString(), 0)
+//	err := st.New(ctx, pg.ConnectionString(), 0, sugar)
 //
 //	if err != nil {
 //		// Логируем ошибку, если открытие/создание файла не удалось

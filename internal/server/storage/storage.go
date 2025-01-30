@@ -3,15 +3,16 @@ package storage
 import (
 	"context"
 	"github.com/vyrodovalexey/metrics/internal/model"
+	"go.uber.org/zap"
 )
 
 type Storage interface {
 	// New Создание нового хранилища
-	New(ctx context.Context, filePath string, interval uint) error
+	New(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error
 	// NewDatabaseConnection Создание соединения с базой данных
 	Check(ctx context.Context) error
 	// Load Загрузка хранилища из файла
-	Load(ctx context.Context, filePath string, interval uint) error
+	Load(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error
 	// UpdateGauge Добавление метрики Gauge
 	UpdateGauge(ctx context.Context, name string, item model.Gauge) error
 	// UpdateCounter Добавление метрики Counter

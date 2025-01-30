@@ -40,16 +40,15 @@ func main() {
 	if cfg.DatabaseDSN != "" {
 		// Инициализируем интерфейс и структуру хранения данных
 		var st storage2.Storage = &pgstorage.PgStorageWithAttributes{}
-		err := st.New(ctx, cfg.DatabaseDSN, cfg.DatabaseTimeout)
+		err := st.New(ctx, cfg.DatabaseDSN, cfg.DatabaseTimeout, lg)
 
 		if err != nil {
 			// Логируем ошибку, если открытие/создание файла не удалось
-			lg.Panicw("Connecting to database...",
+			lg.Panicw("",
 				"Error database connection:", err,
 			)
 			return
 		}
-		lg.Infow("Connected to database")
 		// Настраиваем маршрутизацию
 		routing.ConfigureRouting(ctx, r, st)
 		// Загружаем HTML-шаблоны из указанной директории
@@ -64,7 +63,7 @@ func main() {
 		// Проверяем, нужно ли загружать файл хранилища
 		// Если нет, инициализируем новое
 		if cfg.Restore {
-			err := st.Load(ctx, cfg.FileStoragePath, cfg.StoreInterval)
+			err := st.Load(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
 			if err != nil {
 				// Логируем ошибку, если открытие/создание файла не удалось
 				lg.Panicw("Initializing file storage...",
@@ -74,7 +73,7 @@ func main() {
 			}
 		} else {
 			// Логируем ошибку, если открытие/создание файла не удалось
-			err := st.New(ctx, cfg.FileStoragePath, cfg.StoreInterval)
+			err := st.New(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
 			if err != nil {
 				lg.Panicw("Initializing file storage...",
 					"Error creating file:", err,
