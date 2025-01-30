@@ -6,6 +6,7 @@ import (
 	"github.com/vyrodovalexey/metrics/internal/agent/scribemetrics"
 	"github.com/vyrodovalexey/metrics/internal/agent/sendmetrics"
 	"github.com/vyrodovalexey/metrics/internal/model"
+	"log"
 	"net/http"
 	"reflect"
 	"time"
@@ -13,7 +14,7 @@ import (
 
 const (
 	maxIdleConnectionsPerHost = 10    // Максимальное количество неактивных соединений на хост
-	requestTimeout            = 30    // Таймаут запроса в секундах
+	requestTimeout            = 3     // Таймаут запроса в секундах
 	sendJSON                  = false // Флаг для отправки данных в формате JSON
 )
 
@@ -37,6 +38,9 @@ func main() {
 	ConfigParser(cfg)
 
 	client := httpClient()
+
+	//ctx := context.Background()
+
 	// Инициализируем структуру метрик
 	m := scribemetrics.MemMetrics{}
 
@@ -50,6 +54,7 @@ func main() {
 	go scribemetrics.ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
 		if m.PollCount > 0 {
+			var err error
 			val := reflect.ValueOf(m)
 			typ := reflect.TypeOf(m)
 			// Инициализируем структуру для метрик в виде batch
@@ -74,15 +79,21 @@ func main() {
 					batch[i] = met
 				} else if sendJSON {
 					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
-					sendmetrics.SendAsJSON(client, r, &met)
+					err = sendmetrics.SendAsJSON(client, r, &met)
 				} else {
 					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metricSetup, typ.Field(i).Name, val.Field(i))
-					sendmetrics.SendAsPlain(client, r)
+					err = sendmetrics.SendAsPlain(client, r)
+				}
+				if err != nil {
+					log.Fatalln(err)
 				}
 			}
 			if cfg.BatchMode {
 				r := fmt.Sprintf("http://%s/updates/", cfg.EndpointAddr)
-				sendmetrics.SendAsBatchJSON(client, r, &batch)
+				err = sendmetrics.SendAsBatchJSON(client, r, &batch)
+			}
+			if err != nil {
+				log.Fatalln(err)
 			}
 		}
 		<-time.After(time.Duration(cfg.ReportInterval) * time.Second)

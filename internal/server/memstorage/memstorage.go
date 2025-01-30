@@ -34,19 +34,27 @@ func (m *MemStorageWithAttributes) New(ctx context.Context, filePath string, int
 	m.mst.GaugeMap = make(map[string]model.Gauge)
 	m.mst.CounterMap = make(map[string]model.Counter)
 	m.lg = log
-	// Открываем или создаем файл для хранения
-	m.f, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-
 	m.interval = interval
 	if interval > 0 {
 		m.p = true
 	} else {
 		m.p = false
 	}
-	return nil
+	// Открываем или создаем файл для хранения
+	for i := 0; i <= 2; i++ {
+		m.f, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
+			m.lg.Infow("File is not ready...")
+		} else {
+			return nil
+		}
+		if i == 0 {
+			<-time.After(1 * time.Second)
+		} else {
+			<-time.After(time.Duration(i*2+1) * time.Second)
+		}
+	}
+	return err
 }
 
 // UpdateCounter Добавление метрики Counter
