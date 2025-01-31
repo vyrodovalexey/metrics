@@ -23,21 +23,21 @@ const (
 func SendRequest(cl *http.Client, req *http.Request) (*http.Response, error) {
 	var resp *http.Response
 	var err error
-	for i := 0; i < 3; i++ {
-		resp, err = cl.Do(req)
+	//for i := 0; i < 3; i++ {
+	resp, err = cl.Do(req)
 
-		if err != nil {
-			fmt.Printf("Server is not ready: %v\n", err)
-
-		} else {
-			return resp, nil
-		}
-		if i == 0 {
-			<-time.After(1 * time.Second)
-		} else {
-			<-time.After(time.Duration(i*2+1) * time.Second)
-		}
+	if err != nil {
+		fmt.Printf("Server is not ready: %v\n", err)
 	}
+	//	} else {
+	//		return resp, nil
+	//	}
+	//	if i == 0 {
+	//		<-time.After(1 * time.Second)
+	//	} else {
+	//		<-time.After(time.Duration(i*2+1) * time.Second)
+	//	}
+	//}
 	return resp, err
 }
 
