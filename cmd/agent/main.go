@@ -14,7 +14,7 @@ import (
 
 const (
 	maxIdleConnectionsPerHost = 10    // Максимальное количество неактивных соединений на хост
-	requestTimeout            = 3     // Таймаут запроса в секундах
+	requestTimeout            = 30    // Таймаут запроса в секундах
 	sendJSON                  = false // Флаг для отправки данных в формате JSON
 )
 

@@ -23,7 +23,7 @@ const (
 func SendRequest(cl *http.Client, req *http.Request) (*http.Response, error) {
 	var resp *http.Response
 	var err error
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		resp, err = cl.Do(req)
 
 		if err != nil {
@@ -32,7 +32,6 @@ func SendRequest(cl *http.Client, req *http.Request) (*http.Response, error) {
 		} else {
 			return resp, nil
 		}
-
 		if i == 0 {
 			<-time.After(1 * time.Second)
 		} else {
