@@ -80,7 +80,7 @@ func SendAsJSON(cl *http.Client, url string, m *model.Metrics) error {
 	// Пытаемся отправить запрос
 	resp, errr := SendRequest(cl, req)
 	if errr == nil {
-		resp.Body.Close()
+
 		// Вывод статуса запроса
 		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
 		var reader io.ReadCloser
@@ -96,6 +96,7 @@ func SendAsJSON(cl *http.Client, url string, m *model.Metrics) error {
 			// Ответ не кодирован GZIP, используем тело запроса как есть
 			reader = resp.Body
 		}
+		resp.Body.Close()
 		body, err := io.ReadAll(reader) // Чтение тела ответа
 		if err != nil {
 			// Ошибка при чтении тела ответа
@@ -128,7 +129,7 @@ func SendAsBatchJSON(cl *http.Client, url string, b *model.MetricsBatch) error {
 	resp, errr := SendRequest(cl, req)
 
 	if errr == nil {
-		resp.Body.Close()
+
 		// Вывод статуса запроса
 		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
 		var reader io.ReadCloser
@@ -144,6 +145,7 @@ func SendAsBatchJSON(cl *http.Client, url string, b *model.MetricsBatch) error {
 			// Ответ не кодирован GZIP, используем тело запроса как есть
 			reader = resp.Body
 		}
+		resp.Body.Close()
 		body, err := io.ReadAll(reader) // Чтение тела ответа
 		if err != nil {
 			// Ошибка при чтении тела ответа
