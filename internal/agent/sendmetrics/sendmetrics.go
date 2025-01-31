@@ -59,6 +59,7 @@ func SendAsPlain(cl *http.Client, url string) error {
 
 		// Вывод статуса запроса
 		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
+		resp.Body.Close()
 	}
 	return errr
 }
@@ -79,6 +80,7 @@ func SendAsJSON(cl *http.Client, url string, m *model.Metrics) error {
 	// Пытаемся отправить запрос
 	resp, errr := SendRequest(cl, req)
 	if errr == nil {
+		resp.Body.Close()
 		// Вывод статуса запроса
 		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
 		var reader io.ReadCloser
@@ -126,6 +128,7 @@ func SendAsBatchJSON(cl *http.Client, url string, b *model.MetricsBatch) error {
 	resp, errr := SendRequest(cl, req)
 
 	if errr == nil {
+		resp.Body.Close()
 		// Вывод статуса запроса
 		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
 		var reader io.ReadCloser
