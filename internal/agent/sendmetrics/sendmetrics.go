@@ -26,9 +26,9 @@ func SendRequest(cl *http.Client, req *http.Request) (*http.Response, error) {
 	//for i := 0; i < 3; i++ {
 	resp, err = cl.Do(req)
 
-	if err != nil {
-		fmt.Printf("Server is not ready: %v\n", err)
-	}
+	//if err != nil {
+	//	fmt.Printf("Server is not ready: %v\n", err)
+	//}
 	//	} else {
 	//		return resp, nil
 	//	}
