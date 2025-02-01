@@ -13,6 +13,9 @@ const (
 	badrequest      = "Bad Request"
 	ContentType     = "Content-Type"
 	ContentTypeJSON = "application/json"
+	AcceptEncoding  = "Accept-Encoding"
+	ContentEncoding = "Content-Encoding"
+	EncodingGzip    = "gzip"
 )
 
 // UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.
@@ -34,6 +37,8 @@ func UpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc
 			err := m.BodyToMetric(&body)
 			// Устанавливаем заголовок Content-Type в application/json
 			c.Header(ContentType, ContentTypeJSON)
+			c.Header(AcceptEncoding, EncodingGzip)
+			c.Header(ContentEncoding, EncodingGzip)
 			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -78,6 +83,8 @@ func BatchUpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.Handle
 			err := b.BodyToMetricBatch(&body)
 			// Устанавливаем заголовок Content-Type в application/json
 			c.Header(ContentType, ContentTypeJSON)
+			c.Header(AcceptEncoding, EncodingGzip)
+			c.Header(ContentEncoding, EncodingGzip)
 			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -182,6 +189,8 @@ func GetBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 			// Создаем новую пустую метрику
 			m := &model.Metrics{}
 			c.Header(ContentType, ContentTypeJSON)
+			c.Header(AcceptEncoding, EncodingGzip)
+			c.Header(ContentEncoding, EncodingGzip)
 			// Получаем тело запроса
 			body := c.Request.Body
 			// Парсим тело запроса в структуру Metrics
