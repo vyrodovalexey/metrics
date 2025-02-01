@@ -85,7 +85,7 @@ func main() {
 					err = sendmetrics.SendAsPlain(client, r)
 				}
 				if err != nil {
-					log.Fatalln(err)
+					log.Println(err)
 				}
 			}
 			if cfg.BatchMode {
@@ -93,7 +93,7 @@ func main() {
 				err = sendmetrics.SendAsBatchJSON(client, r, &batch)
 			}
 			if err != nil {
-				log.Fatalln(err)
+				log.Println(err)
 			}
 		}
 		<-time.After(time.Duration(cfg.ReportInterval) * time.Second)
