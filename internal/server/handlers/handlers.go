@@ -32,6 +32,8 @@ func UpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc
 			body := c.Request.Body
 			// Парсим тело запроса в структуру Metrics
 			err := m.BodyToMetric(&body)
+			// Устанавливаем заголовок Content-Type в application/json
+			c.Header(ContentType, ContentTypeJSON)
 			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -74,6 +76,8 @@ func BatchUpdateFromBodyJSON(ctx context.Context, st storage.Storage) gin.Handle
 			body := c.Request.Body
 			// Парсим тело запроса в структуру Metrics
 			err := b.BodyToMetricBatch(&body)
+			// Устанавливаем заголовок Content-Type в application/json
+			c.Header(ContentType, ContentTypeJSON)
 			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -177,6 +181,7 @@ func GetBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 		} else {
 			// Создаем новую пустую метрику
 			m := &model.Metrics{}
+			c.Header(ContentType, ContentTypeJSON)
 			// Получаем тело запроса
 			body := c.Request.Body
 			// Парсим тело запроса в структуру Metrics
