@@ -83,7 +83,7 @@ func (p *PgStorageWithAttributes) pingDB(ctx context.Context) error {
 	for i := 0; i < 5; i++ {
 		err = p.conn.Ping(timeoutCtx)
 		if err != nil {
-			p.lg.Infow("Database is not ready...")
+			p.lg.Infof("Database is not ready %v", err)
 
 		} else {
 			p.lg.Infow("Database ping successful")
@@ -108,12 +108,12 @@ func (p *PgStorageWithAttributes) execDB(ctx context.Context, query string, args
 	if err != nil {
 		return err
 	}
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 
 		_, err = p.conn.Exec(ctx, query, args...)
 
 		if err != nil {
-			p.lg.Infow("Database is not ready...")
+			p.lg.Infof("Database is not ready to execute query %v", err)
 		} else {
 			p.lg.Infof("Query %s executed", query)
 			return nil
@@ -126,7 +126,7 @@ func (p *PgStorageWithAttributes) execDB(ctx context.Context, query string, args
 		}
 	}
 
-	p.lg.Infow("Can't connect to database")
+	p.lg.Infow("Can't connect to database to execute query")
 	return err
 }
 
