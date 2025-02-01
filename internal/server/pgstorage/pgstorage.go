@@ -15,7 +15,7 @@ import (
 
 const (
 	QueryCreateGaugeTable   = "CREATE TABLE IF NOT EXISTS gauge (name TEXT NOT NULL unique,value DOUBLE PRECISION NOT NULL)"
-	QueryCreateCounterTable = "CREATE TABLE IF NOT EXISTS counter (name TEXT NOT NULL unique,value INTEGER NOT NULL)"
+	QueryCreateCounterTable = "CREATE TABLE IF NOT EXISTS counter (name TEXT NOT NULL unique,value bigint NOT NULL)"
 	QuerySelectCounter      = "SELECT value FROM counter WHERE name = $1"
 	QuerySelectGauge        = "SELECT value FROM gauge WHERE name = $1"
 	QuerySelectAllGauge     = "SELECT name,value FROM gauge"
