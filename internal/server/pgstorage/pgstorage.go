@@ -80,7 +80,7 @@ func (p *PgStorageWithAttributes) pingDB(ctx context.Context) error {
 	var err error
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
-	for i := 0; i <= 3; i++ {
+	for i := 0; i < 5; i++ {
 		err = p.conn.Ping(timeoutCtx)
 		if err != nil {
 			p.lg.Infow("Database is not ready...")
