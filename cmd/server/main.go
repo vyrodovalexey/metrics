@@ -34,7 +34,8 @@ func main() {
 		"Store interval in sec", cfg.StoreInterval,
 	)
 	// Проверка открыт ли порт
-	//e := IsPortAvailable(cfg.ListenAddr, lg)
+	e := IsPortAvailable(cfg.ListenAddr, lg)
+	lg.Panicf("can't start server: %v", e)
 	// Инициализируем маршрутизатор с хранилищем и логированием
 	r := routing.SetupRouter(lg)
 
@@ -58,7 +59,7 @@ func main() {
 		r.LoadHTMLGlob("templates/*")
 		// Запускаем HTTP-сервер на заданном адресе
 		err = r.Run(cfg.ListenAddr)
-		fmt.Println(err)
+		lg.Panicf("can't start server: %v", err)
 		// Сохраняем текущую структуру данных в файловое хранилище
 		st.Close()
 	} else {
