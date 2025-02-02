@@ -33,9 +33,6 @@ func main() {
 		"Load storage file on start true/false", cfg.Restore,
 		"Store interval in sec", cfg.StoreInterval,
 	)
-	// Проверка открыт ли порт
-	e := IsPortAvailable(cfg.ListenAddr, lg)
-	lg.Panicf("can't start server: %v", e)
 	// Инициализируем маршрутизатор с хранилищем и логированием
 	r := routing.SetupRouter(lg)
 
