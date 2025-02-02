@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/server/config"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
 	"github.com/vyrodovalexey/metrics/internal/server/memstorage"
@@ -16,6 +17,7 @@ const (
 )
 
 func main() {
+	var err error
 	// Создаем новый экземпляр конфигурации
 	cfg := config.New()
 	// Парсим настройки конфигурации
@@ -31,7 +33,8 @@ func main() {
 		"Load storage file on start true/false", cfg.Restore,
 		"Store interval in sec", cfg.StoreInterval,
 	)
-
+	// Проверка открыт ли порт
+	//e := IsPortAvailable(cfg.ListenAddr, lg)
 	// Инициализируем маршрутизатор с хранилищем и логированием
 	r := routing.SetupRouter(lg)
 
@@ -40,7 +43,7 @@ func main() {
 	if cfg.DatabaseDSN != "" {
 		// Инициализируем интерфейс и структуру хранения данных
 		var st storage2.Storage = &pgstorage.PgStorageWithAttributes{}
-		err := st.New(ctx, cfg.DatabaseDSN, cfg.DatabaseTimeout, lg)
+		err = st.New(ctx, cfg.DatabaseDSN, cfg.DatabaseTimeout, lg)
 
 		if err != nil {
 			// Логируем ошибку, если открытие/создание файла не удалось
@@ -54,7 +57,8 @@ func main() {
 		// Загружаем HTML-шаблоны из указанной директории
 		r.LoadHTMLGlob("templates/*")
 		// Запускаем HTTP-сервер на заданном адресе
-		r.Run(cfg.ListenAddr)
+		err = r.Run(cfg.ListenAddr)
+		fmt.Println(err)
 		// Сохраняем текущую структуру данных в файловое хранилище
 		st.Close()
 	} else {
@@ -63,7 +67,7 @@ func main() {
 		// Проверяем, нужно ли загружать файл хранилища
 		// Если нет, инициализируем новое
 		if cfg.Restore {
-			err := st.Load(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
+			err = st.Load(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
 			if err != nil {
 				// Логируем ошибку, если открытие/создание файла не удалось
 				lg.Panicw("Initializing file storage...",
@@ -73,7 +77,7 @@ func main() {
 			}
 		} else {
 			// Логируем ошибку, если открытие/создание файла не удалось
-			err := st.New(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
+			err = st.New(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
 			if err != nil {
 				lg.Panicw("Initializing file storage...",
 					"Error creating file:", err,
@@ -93,9 +97,10 @@ func main() {
 		// Загружаем HTML-шаблоны из указанной директории
 		r.LoadHTMLGlob("templates/*")
 		// Запускаем HTTP-сервер на заданном адресе
-		r.Run(cfg.ListenAddr)
+		err = r.Run(cfg.ListenAddr)
+		fmt.Println(err)
 		// Сохраняем текущую структуру данных в файловое хранилище
-		err := st.Save()
+		err = st.Save()
 		if err != nil {
 			// Логируем ошибку, если открытие/создание файла не удалось
 			lg.Panicw("Saving data...",
