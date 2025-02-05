@@ -168,7 +168,6 @@ func Get(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 		}
 		// Возвращаем метрику клиенту с кодом 200 OK
 		c.String(http.StatusOK, m.PrintMetric())
-
 	}
 }
 
@@ -209,7 +208,6 @@ func GetBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 		}
 		// Возвращаем метрику клиенту с кодом 200 OK
 		c.JSON(http.StatusOK, m)
-		return
 	}
 }
 
