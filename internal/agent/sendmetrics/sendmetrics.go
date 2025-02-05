@@ -63,6 +63,7 @@ func SendAsJSONRequest(cl *http.Client, url string, jm []byte) error {
 			reader, err = gzip.NewReader(resp.Body)
 			if err != nil {
 				log.Printf("failed to create gzip reader: %v", err) // Ошибка при создании читателя GZIP
+				return err
 			}
 			defer reader.Close()
 		default:
@@ -91,6 +92,7 @@ func SendAsPlain(cl *http.Client, url string) error {
 	req, err := http.NewRequest("POST", url, http.NoBody)
 	if err != nil {
 		log.Printf("failed to create request: %v", err) // Ошибка при создании запроса
+		return err
 	}
 	// Установка типа контента запроса
 	req.Header.Set(ContentType, ContentTypeTextPlain)

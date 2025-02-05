@@ -53,7 +53,6 @@ func main() {
 		// Запускаем HTTP-сервер на заданном адресе
 		err = r.Run(cfg.ListenAddr)
 		lg.Infow("can't start server: %v", err)
-		// Сохраняем текущую структуру данных в файловое хранилище
 		st.Close()
 		return
 	} else {
