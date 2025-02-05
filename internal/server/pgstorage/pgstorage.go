@@ -294,7 +294,6 @@ func (p *PgStorageWithAttributes) Load(ctx context.Context, filePath string, int
 // SaveAsync Dummy
 func (p *PgStorageWithAttributes) SaveAsync() {
 	p.lg.Infow("Method is not implemented for postgresql database storage type")
-	return
 }
 
 // Save Dummy

@@ -182,35 +182,34 @@ func GetBodyJSON(ctx context.Context, st storage.Storage) gin.HandlerFunc {
 				"error": badrequest,
 			})
 			return
-		} else {
-			// Создаем новую пустую метрику
-			m := &model.Metrics{}
-			c.Header(ContentType, ContentTypeJSON)
-			c.Header(ContentEncoding, EncodingGzip)
-			// Получаем тело запроса
-			body := c.Request.Body
-			// Парсим тело запроса в структуру Metrics
-			err := m.BodyToMetric(body)
-			// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": badrequest,
-				})
-				return
-			}
-			// Получаем метрику из хранилища
-			b := st.GetMetric(ctx, m)
-			// Если метрика не найдена, возвращаем ошибку 404 Not Found
-			if !b {
-				c.JSON(http.StatusNotFound, gin.H{
-					"error": badrequest,
-				})
-				return
-			}
-			// Возвращаем метрику клиенту с кодом 200 OK
-			c.JSON(http.StatusOK, m)
+		}
+		// Создаем новую пустую метрику
+		m := &model.Metrics{}
+		c.Header(ContentType, ContentTypeJSON)
+		c.Header(ContentEncoding, EncodingGzip)
+		// Получаем тело запроса
+		body := c.Request.Body
+		// Парсим тело запроса в структуру Metrics
+		err := m.BodyToMetric(body)
+		// Если произошла ошибка при парсинге, возвращаем ошибку 400 Bad Request
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": badrequest,
+			})
 			return
 		}
+		// Получаем метрику из хранилища
+		b := st.GetMetric(ctx, m)
+		// Если метрика не найдена, возвращаем ошибку 404 Not Found
+		if !b {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": badrequest,
+			})
+			return
+		}
+		// Возвращаем метрику клиенту с кодом 200 OK
+		c.JSON(http.StatusOK, m)
+		return
 	}
 }
 
