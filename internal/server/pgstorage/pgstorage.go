@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/vyrodovalexey/metrics/internal/model"
 	"go.uber.org/zap"
-	"log"
 	"time"
 )
 
@@ -231,7 +230,8 @@ func (p *PgStorageWithAttributes) GetAllMetricNames(ctx context.Context) (map[st
 		var v model.Gauge
 		err := gaugerows.Scan(&name, &v)
 		if err != nil {
-			log.Fatal(err)
+			p.lg.Infow("gauge scan", "error", err)
+			return null, null, err
 		}
 		gvalues[name] = fmt.Sprintf("%v", v)
 	}
@@ -245,6 +245,7 @@ func (p *PgStorageWithAttributes) GetAllMetricNames(ctx context.Context) (map[st
 		var v model.Counter
 		err := counterrows.Scan(&name, &v)
 		if err != nil {
+			p.lg.Infow("counter scan", "error", err)
 			return null, null, err
 		}
 		cvalues[name] = fmt.Sprintf("%v", v)

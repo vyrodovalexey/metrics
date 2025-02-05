@@ -90,7 +90,7 @@ func SendAsPlain(cl *http.Client, url string) error {
 	//defer cancel()
 	req, err := http.NewRequest("POST", url, http.NoBody)
 	if err != nil {
-		log.Fatal(err) // Ошибка при создании запроса
+		log.Printf("failed to create request: %v", err) // Ошибка при создании запроса
 	}
 	// Установка типа контента запроса
 	req.Header.Set(ContentType, ContentTypeTextPlain)
