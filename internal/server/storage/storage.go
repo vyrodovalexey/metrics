@@ -28,7 +28,7 @@ type Storage interface {
 	// GetAllMetricNames Получение списка имен метрик
 	GetAllMetricNames(ctx context.Context) (map[string]string, map[string]string, error)
 	// SaveAsync Асинхронная сохранение данных хранилища в файл
-	SaveAsync() error
+	SaveAsync()
 	// Save Сохранение данных хранилища в файл
 	Save() error
 

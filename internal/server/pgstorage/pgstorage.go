@@ -97,7 +97,7 @@ func (p *PgStorageWithAttributes) pingDB(ctx context.Context) error {
 		}
 	}
 
-	p.lg.Panicw("Can't connect to database")
+	p.lg.Infow("Can't connect to database")
 	return err
 }
 
@@ -292,8 +292,9 @@ func (p *PgStorageWithAttributes) Load(ctx context.Context, filePath string, int
 }
 
 // SaveAsync Dummy
-func (p *PgStorageWithAttributes) SaveAsync() error {
-	return fmt.Errorf("method is not implemented for postgresql database storage type")
+func (p *PgStorageWithAttributes) SaveAsync() {
+	p.lg.Infow("Method is not implemented for postgresql database storage type")
+	return
 }
 
 // Save Dummy

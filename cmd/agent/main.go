@@ -75,12 +75,13 @@ func main() {
 					met.Value = &sfloat
 				}
 				// Выбираем отправку в формате BatchJSON, JSON или plaintext
-				if cfg.BatchMode {
+				switch {
+				case cfg.BatchMode:
 					batch[i] = met
-				} else if sendJSON {
+				case sendJSON:
 					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
 					err = sendmetrics.SendAsJSON(client, r, &met)
-				} else {
+				default:
 					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metricSetup, typ.Field(i).Name, val.Field(i))
 					err = sendmetrics.SendAsPlain(client, r)
 				}

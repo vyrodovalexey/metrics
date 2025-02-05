@@ -12,10 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	dbConnectionTimout = 5
-)
-
 func main() {
 	var err error
 	// Создаем новый экземпляр конфигурации
@@ -44,8 +40,8 @@ func main() {
 		err = st.New(ctx, cfg.DatabaseDSN, cfg.DatabaseTimeout, lg)
 
 		if err != nil {
-			// Логируем ошибку, если открытие/создание файла не удалось
-			lg.Panicw("",
+			// Логируем ошибку, если подеключение к базе данных не удалось
+			lg.Infow("",
 				"Error database connection:", err,
 			)
 			return
@@ -56,9 +52,10 @@ func main() {
 		r.LoadHTMLGlob("templates/*")
 		// Запускаем HTTP-сервер на заданном адресе
 		err = r.Run(cfg.ListenAddr)
-		lg.Panicf("can't start server: %v", err)
+		lg.Infow("can't start server: %v", err)
 		// Сохраняем текущую структуру данных в файловое хранилище
 		st.Close()
+		return
 	} else {
 		// Инициализируем интерфейс и структуру хранения данных
 		var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
@@ -68,7 +65,7 @@ func main() {
 			err = st.Load(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
 			if err != nil {
 				// Логируем ошибку, если открытие/создание файла не удалось
-				lg.Panicw("Initializing file storage...",
+				lg.Infow("Initializing file storage...",
 					"Error load data from file:", err,
 				)
 				return
@@ -77,7 +74,7 @@ func main() {
 			// Логируем ошибку, если открытие/создание файла не удалось
 			err = st.New(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
 			if err != nil {
-				lg.Panicw("Initializing file storage...",
+				lg.Infow("Initializing file storage...",
 					"Error creating file:", err,
 				)
 				return

@@ -59,10 +59,10 @@ func (mod *Metrics) URLPathToMetric(mtype string, key string, value string) erro
 }
 
 // BodyToMetric декодирует JSON из тела запроса в структуру Metrics.
-func (mod *Metrics) BodyToMetric(body *io.ReadCloser) error {
+func (mod *Metrics) BodyToMetric(body io.ReadCloser) error {
 	var err error
 	// Декодируем JSON из тела запроса в структуру Metrics
-	err = json.NewDecoder(*body).Decode(mod)
+	err = json.NewDecoder(body).Decode(mod)
 	if err != nil {
 		return err
 	}
@@ -83,10 +83,10 @@ func (mod *Metrics) BodyToMetric(body *io.ReadCloser) error {
 	return err
 }
 
-func (batch *MetricsBatch) BodyToMetricBatch(body *io.ReadCloser) error {
+func (batch *MetricsBatch) BodyToMetricBatch(body io.ReadCloser) error {
 	var err error
 	// Декодируем JSON из тела запроса в структуру Metrics
-	err = json.NewDecoder(*body).Decode(batch)
+	err = json.NewDecoder(body).Decode(batch)
 	if err != nil {
 		return err
 	}

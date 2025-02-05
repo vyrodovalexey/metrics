@@ -41,11 +41,54 @@ func SendRequest(cl *http.Client, req *http.Request) (*http.Response, error) {
 	return resp, err
 }
 
+func SendAsJSONRequest(cl *http.Client, url string, jm []byte) error {
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jm))
+	if err != nil {
+		log.Println(err) // Ошибка при создании запроса
+	}
+	// Установка типа контента запроса и кодировок
+	req.Header.Set(ContentType, ContentTypeJSON)
+	req.Header.Set("Accept-Encoding", EncodingGzip)
+	req.Header.Set(ContentEncoding, EncodingGzip)
+	// Пытаемся отправить запрос
+	resp, errr := SendRequest(cl, req)
+	if errr == nil {
+
+		// Вывод статуса запроса
+		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
+		var reader io.ReadCloser
+		switch resp.Header.Get(ContentEncoding) {
+		case EncodingGzip:
+			// Обработка ответа, кодированного GZIP
+			reader, err = gzip.NewReader(resp.Body)
+			if err != nil {
+				log.Printf("failed to create gzip reader: %v", err) // Ошибка при создании читателя GZIP
+			}
+			defer reader.Close()
+		default:
+			// Ответ не кодирован GZIP, используем тело запроса как есть
+			reader = resp.Body
+		}
+		resp.Body.Close()
+		body, err := io.ReadAll(reader) // Чтение тела ответа
+		if err != nil {
+			// Ошибка при чтении тела ответа
+			fmt.Printf("Error reading response body: %v", err)
+			return err
+		}
+
+		// Вывод тела ответа
+		log.Println(string(body))
+
+	}
+	return errr
+}
+
 // SendAsPlain Отправка запроса в формате plaintext
 func SendAsPlain(cl *http.Client, url string) error {
 	//timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	//defer cancel()
-	req, err := http.NewRequest("POST", url, nil)
+	req, err := http.NewRequest("POST", url, http.NoBody)
 	if err != nil {
 		log.Fatal(err) // Ошибка при создании запроса
 	}
@@ -68,46 +111,9 @@ func SendAsJSON(cl *http.Client, url string, m *model.Metrics) error {
 	jm, _ := json.Marshal(*m)
 	//timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	//defer cancel()
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jm))
-	if err != nil {
-		log.Println(err) // Ошибка при создании запроса
-	}
-	// Установка типа контента запроса и кодировок
-	req.Header.Set(ContentType, ContentTypeJSON)
-	req.Header.Set("Accept-Encoding", EncodingGzip)
-	req.Header.Set(ContentEncoding, EncodingGzip)
-	// Пытаемся отправить запрос
-	resp, errr := SendRequest(cl, req)
-	if errr == nil {
+	err := SendAsJSONRequest(cl, url, jm)
+	return err
 
-		// Вывод статуса запроса
-		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
-		var reader io.ReadCloser
-		switch resp.Header.Get(ContentEncoding) {
-		case EncodingGzip:
-			// Обработка ответа, кодированного GZIP
-			reader, err = gzip.NewReader(resp.Body)
-			if err != nil {
-				log.Printf("failed to create gzip reader: %v", err) // Ошибка при создании читателя GZIP
-			}
-			defer reader.Close()
-		default:
-			// Ответ не кодирован GZIP, используем тело запроса как есть
-			reader = resp.Body
-		}
-		resp.Body.Close()
-		body, err := io.ReadAll(reader) // Чтение тела ответа
-		if err != nil {
-			// Ошибка при чтении тела ответа
-			fmt.Printf("Error reading response body: %v", err)
-			return err
-		}
-
-		// Вывод тела ответа
-		log.Println(string(body))
-
-	}
-	return errr
 }
 
 // SendAsBatchJSON Отправка batch в формате JSON
@@ -115,45 +121,6 @@ func SendAsBatchJSON(cl *http.Client, url string, b *model.MetricsBatch) error {
 	jm, _ := json.Marshal(*b)
 	//timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	//defer cancel()
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jm))
-	if err != nil {
-		log.Println(err) // Ошибка при создании запроса
-	}
-	// Установка типа контента запроса и кодировок
-	req.Header.Set(ContentType, ContentTypeJSON)
-	req.Header.Set("Accept-Encoding", EncodingGzip)
-	req.Header.Set(ContentEncoding, EncodingGzip)
-	// Пытаемся отправить запрос
-
-	resp, errr := SendRequest(cl, req)
-
-	if errr == nil {
-
-		// Вывод статуса запроса
-		fmt.Println(time.Now(), " ", url, " ", resp.StatusCode)
-		var reader io.ReadCloser
-		switch resp.Header.Get(ContentEncoding) {
-		case EncodingGzip:
-			// Обработка ответа, кодированного GZIP
-			reader, err = gzip.NewReader(resp.Body)
-			if err != nil {
-				log.Printf("failed to create gzip reader: %v", err) // Ошибка при создании читателя GZIP
-			}
-			defer reader.Close()
-		default:
-			// Ответ не кодирован GZIP, используем тело запроса как есть
-			reader = resp.Body
-		}
-		resp.Body.Close()
-		body, err := io.ReadAll(reader) // Чтение тела ответа
-		if err != nil {
-			// Ошибка при чтении тела ответа
-			fmt.Printf("Error reading response body: %v", err)
-			return err
-		}
-
-		// Вывод тела ответа
-		log.Println(string(body))
-	}
-	return errr
+	err := SendAsJSONRequest(cl, url, jm)
+	return err
 }

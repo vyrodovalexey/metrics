@@ -60,7 +60,7 @@ func (m *MemStorageWithAttributes) New(ctx context.Context, filePath string, int
 // UpdateCounter Добавление метрики Counter
 func (m *MemStorageWithAttributes) UpdateCounter(ctx context.Context, name string, item model.Counter) error {
 	var err error
-	m.mst.CounterMap[name] = m.mst.CounterMap[name] + item // Увеличение значения счетчика
+	m.mst.CounterMap[name] += item // Увеличение значения счетчика
 	if m.p {
 		err = m.Save()
 	}
@@ -186,25 +186,29 @@ func (m *MemStorageWithAttributes) Load(ctx context.Context, filePath string, in
 }
 
 // SaveAsync Асинхронное сохранение данных хранилища метрик в файл
-func (m *MemStorageWithAttributes) SaveAsync() error {
+func (m *MemStorageWithAttributes) SaveAsync() {
 	for {
 		mst, err := json.Marshal(m.mst)
 		if err != nil {
-			return err
+			m.lg.Infof("Can't marshal data %v", err)
+			return
 		}
 
 		// Очистка файла
 		err = m.f.Truncate(0)
 		if err != nil {
-			return err
+			m.lg.Infof("Can't truncate file %v", err)
+			return
 		}
 		_, err = m.f.Seek(0, 0) // Перемещение курсора в начало файла
 		if err != nil {
-			return err
+			m.lg.Infof("Can't seek position in file %v", err)
+			return
 		}
 		_, err = m.f.Write(mst) // Запись данных хранилища метрик в файл
 		if err != nil {
-			return err
+			m.lg.Infof("Can't write data to file %v", err)
+			return
 		}
 		// Интервал ожидания
 		<-time.After(time.Duration(m.interval) * time.Second)
