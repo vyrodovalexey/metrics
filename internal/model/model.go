@@ -116,7 +116,7 @@ func (mod *Metrics) String() string {
 	var res string
 	switch mod.MType {
 	case GaugeString:
-		res = fmt.Sprintf("%f", *mod.Value)
+		res = fmt.Sprintf("%.3f", *mod.Value)
 	case CounterString:
 		res = fmt.Sprintf("%d", *mod.Delta)
 	}

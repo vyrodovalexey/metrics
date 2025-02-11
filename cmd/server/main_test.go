@@ -44,10 +44,10 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 		{
 			name:           "Valid Update gauge",
 			method:         http.MethodPost,
-			url:            "/update/gauge/test/1.4545",
+			url:            "/update/gauge/test/1.454",
 			mimetype:       "text/plain",
 			expectedStatus: http.StatusOK,
-			expectedValue:  "1.454500",
+			expectedValue:  "1.454",
 		},
 		{
 			name:           "Valid Update counter",
@@ -92,7 +92,7 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 			url:            "/value/gauge/test",
 			mimetype:       "text/plain",
 			expectedStatus: http.StatusOK,
-			expectedValue:  "1.454500",
+			expectedValue:  "1.454",
 		},
 		{
 			name:           "Invalid Get gauge",
