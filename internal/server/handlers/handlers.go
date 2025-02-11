@@ -130,7 +130,7 @@ func UpdateFromURLPath(st storage.Storage) gin.HandlerFunc {
 		// Получаем обновленную метрику из хранилища
 		st.GetMetric(m)
 		// Возвращаем обновленную метрику клиенту с кодом 200 OK
-		c.String(http.StatusOK, fmt.Sprintf("%s", m))
+		c.String(http.StatusOK, m.String())
 	}
 }
 
@@ -166,7 +166,7 @@ func Get(st storage.Storage) gin.HandlerFunc {
 			return
 		}
 		// Возвращаем метрику клиенту с кодом 200 OK
-		c.String(http.StatusOK, fmt.Sprintf("%s", m))
+		c.String(http.StatusOK, m.String())
 	}
 }
 
