@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"github.com/vyrodovalexey/metrics/internal/server/config"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
 	"github.com/vyrodovalexey/metrics/internal/server/memstorage"
@@ -22,16 +21,15 @@ func TestConfig(t *testing.T) {
 
 func TestRequestsMemStorageSyncNew(t *testing.T) {
 	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
-	ctx := context.Background()
 	sugar := logging.NewLogging(zap.InfoLevel)
 	// Создаем новый экземпляр конфигурации
-	err := st.New(ctx, "/tmp/metrics-storage.json", 0, sugar)
+	err := st.New("/tmp/metrics-storage.json", 0, sugar)
 	if err != nil {
 		t.Errorf("initializing file storage... Error: %v", err)
 	}
 
 	router := routing.SetupRouter(sugar)
-	routing.ConfigureRouting(ctx, router, st)
+	routing.ConfigureRouting(router, st)
 	router.LoadHTMLGlob("../../templates/*")
 
 	testsNew := []struct {
@@ -197,9 +195,8 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 
 func TestMemStorageSyncLoad(t *testing.T) {
 	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
-	ctx := context.Background()
 	sugar := logging.NewLogging(zap.InfoLevel)
-	err := st.Load(ctx, "../../test/data/metrics-storage.json", 0, sugar)
+	err := st.Load("../../test/data/metrics-storage.json", 0, sugar)
 	if err != nil {
 		// Логируем ошибку, если открытие/создание файла не удалось
 		sugar.Panicw("Initializing file storage...",
@@ -209,7 +206,7 @@ func TestMemStorageSyncLoad(t *testing.T) {
 	}
 
 	router := routing.SetupRouter(sugar)
-	routing.ConfigureRouting(ctx, router, st)
+	routing.ConfigureRouting(router, st)
 	router.LoadHTMLGlob("../../templates/*")
 
 	testsLoad := []struct {
