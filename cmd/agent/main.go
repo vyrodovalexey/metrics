@@ -16,6 +16,8 @@ const (
 	maxIdleConnectionsPerHost = 10    // Максимальное количество неактивных соединений на хост
 	requestTimeout            = 30    // Таймаут запроса в секундах
 	sendJSON                  = false // Флаг для отправки данных в формате JSON
+	CounterString             = "counter"
+	GaugeString               = "gauge"
 )
 
 // Функция для создания HTTP клиента
@@ -38,8 +40,6 @@ func main() {
 	ConfigParser(cfg)
 
 	client := httpClient()
-
-	//ctx := context.Background()
 
 	// Инициализируем структуру метрик
 	m := scribemetrics.MemMetrics{}
@@ -64,13 +64,13 @@ func main() {
 				// Костыль - Настройка типа метрики
 				switch typ.Field(i).Name {
 				case "PollCount":
-					metricSetup = "counter"
-					met.MType = "counter"
+					metricSetup = CounterString
+					met.MType = CounterString
 					sint := val.Field(i).Int()
 					met.Delta = &sint
 				default:
-					metricSetup = "gauge"
-					met.MType = "gauge"
+					metricSetup = GaugeString
+					met.MType = GaugeString
 					sfloat := val.Field(i).Float()
 					met.Value = &sfloat
 				}

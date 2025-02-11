@@ -7,6 +7,11 @@ import (
 	"strconv"
 )
 
+const (
+	CounterString = "counter"
+	GaugeString   = "gauge"
+)
+
 type Gauge = float64
 type Counter = int64
 
@@ -26,9 +31,9 @@ func (mod *Metrics) URLPathToMetric(mtype string, key string, value string) erro
 	var gauge float64
 	var counter int64
 	switch mtype {
-	case "gauge":
+	case GaugeString:
 		// Если тип метрики - gauge, устанавливаем тип и имя метрики
-		mod.MType = "gauge"
+		mod.MType = GaugeString
 		mod.ID = key
 		// Если значение value не пустое, парсим его как float64 и устанавливаем в поле Value
 		if len(value) > 0 {
@@ -38,9 +43,9 @@ func (mod *Metrics) URLPathToMetric(mtype string, key string, value string) erro
 			}
 			mod.Value = &gauge
 		}
-	case "counter":
+	case CounterString:
 		// Если тип метрики - counter, устанавливаем тип и имя метрики
-		mod.MType = "counter"
+		mod.MType = CounterString
 		mod.ID = key
 		// Если значение value не пустое, парсим его как int64 и устанавливаем в поле Delta
 		if len(value) > 0 {
@@ -69,10 +74,10 @@ func (mod *Metrics) BodyToMetric(body io.ReadCloser) error {
 	// Проверяем тип метрики
 
 	switch mod.MType {
-	case "gauge":
+	case GaugeString:
 		err = nil
 
-	case "counter":
+	case CounterString:
 		err = nil
 
 	default:
@@ -93,10 +98,10 @@ func (batch *MetricsBatch) BodyToMetricBatch(body io.ReadCloser) error {
 	for i := range *batch {
 		// Проверяем тип метрики
 		switch (*batch)[i].MType {
-		case "gauge":
+		case GaugeString:
 			err = nil
 
-		case "counter":
+		case CounterString:
 			err = nil
 
 		default:
@@ -107,12 +112,12 @@ func (batch *MetricsBatch) BodyToMetricBatch(body io.ReadCloser) error {
 	return err
 }
 
-func (mod *Metrics) PrintMetric() string {
+func (mod *Metrics) String() string {
 	var res string
 	switch mod.MType {
-	case "gauge":
-		res = fmt.Sprintf("%v", *mod.Value)
-	case "counter":
+	case GaugeString:
+		res = fmt.Sprintf("%.6f", *mod.Value)
+	case CounterString:
 		res = fmt.Sprintf("%d", *mod.Delta)
 	}
 	return res

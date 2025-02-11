@@ -29,6 +29,7 @@ type PgStorageWithAttributes struct {
 	conn    *pgx.Conn
 	timeout uint
 	lg      *zap.SugaredLogger
+	ctx     context.Context
 }
 
 func IsRetriableError(err error) bool {
@@ -129,78 +130,79 @@ func (p *PgStorageWithAttributes) execDB(ctx context.Context, query string, args
 	return err
 }
 
-func (p *PgStorageWithAttributes) New(ctx context.Context, c string, timeout uint, log *zap.SugaredLogger) error {
+func (p *PgStorageWithAttributes) New(c string, timeout uint, log *zap.SugaredLogger) error {
 	var err error
+	p.ctx = context.Background()
 	p.timeout = timeout
 	p.lg = log
-	err = p.connectDB(ctx, c)
+	err = p.connectDB(p.ctx, c)
 	if err != nil {
 		return err
 	}
-	err = p.execDB(ctx, QueryCreateGaugeTable)
+	err = p.execDB(p.ctx, QueryCreateGaugeTable)
 	if err != nil {
 		return err
 	}
-	err = p.execDB(ctx, QueryCreateCounterTable)
+	err = p.execDB(p.ctx, QueryCreateCounterTable)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (p *PgStorageWithAttributes) Check(ctx context.Context) error {
-	err := p.pingDB(ctx)
+func (p *PgStorageWithAttributes) Check() error {
+	err := p.pingDB(p.ctx)
 	return err
 }
 
 // UpdateCounter Добавление метрики Counter
-func (p *PgStorageWithAttributes) UpdateCounter(ctx context.Context, name string, item model.Counter) error {
+func (p *PgStorageWithAttributes) UpdateCounter(name string, item model.Counter) error {
 	var err error
-	_, b := p.GetCounter(ctx, name)
+	_, b := p.GetCounter(name)
 	if b {
-		err = p.execDB(ctx, QueryUpdateCounter, name, item)
+		err = p.execDB(p.ctx, QueryUpdateCounter, name, item)
 	} else {
-		err = p.execDB(ctx, QueryInsertCounter, name, item)
+		err = p.execDB(p.ctx, QueryInsertCounter, name, item)
 	}
 	return err
 }
 
 // UpdateGauge Добавление метрики Gauge
-func (p *PgStorageWithAttributes) UpdateGauge(ctx context.Context, name string, item model.Gauge) error {
+func (p *PgStorageWithAttributes) UpdateGauge(name string, item model.Gauge) error {
 	var err error
-	_, b := p.GetGauge(ctx, name)
+	_, b := p.GetGauge(name)
 	if b {
-		err = p.execDB(ctx, QueryUpdateGauge, name, item)
+		err = p.execDB(p.ctx, QueryUpdateGauge, name, item)
 	} else {
-		err = p.execDB(ctx, QueryInsertGauge, name, item)
+		err = p.execDB(p.ctx, QueryInsertGauge, name, item)
 	}
 	return err
 }
 
 // UpdateMetric Добавление метрики в формате model. Metrics
-func (p *PgStorageWithAttributes) UpdateMetric(ctx context.Context, metrics *model.Metrics) error {
+func (p *PgStorageWithAttributes) UpdateMetric(metrics *model.Metrics) error {
 	var err error
 	if metrics.MType == "counter" {
-		err = p.UpdateCounter(ctx, metrics.ID, *metrics.Delta)
+		err = p.UpdateCounter(metrics.ID, *metrics.Delta)
 	}
 	if metrics.MType == "gauge" {
-		err = p.UpdateGauge(ctx, metrics.ID, *metrics.Value)
+		err = p.UpdateGauge(metrics.ID, *metrics.Value)
 
 	}
 	return err
 }
 
 // GetMetric Получение метрики в формате model. Metrics
-func (p *PgStorageWithAttributes) GetMetric(ctx context.Context, metrics *model.Metrics) bool {
+func (p *PgStorageWithAttributes) GetMetric(metrics *model.Metrics) bool {
 
 	if metrics.MType == "counter" {
-		i, b := p.GetCounter(ctx, metrics.ID)
+		i, b := p.GetCounter(metrics.ID)
 		metrics.Delta = &i
 		metrics.Value = nil
 		return b
 	}
 	if metrics.MType == "gauge" {
-		g, b := p.GetGauge(ctx, metrics.ID)
+		g, b := p.GetGauge(metrics.ID)
 		metrics.Value = &g
 		metrics.Delta = nil
 		return b
@@ -209,18 +211,18 @@ func (p *PgStorageWithAttributes) GetMetric(ctx context.Context, metrics *model.
 }
 
 // GetAllMetricNames Получение полного списка имен метрик
-func (p *PgStorageWithAttributes) GetAllMetricNames(ctx context.Context) (map[string]string, map[string]string, error) {
+func (p *PgStorageWithAttributes) GetAllMetricNames() (map[string]string, map[string]string, error) {
 	var gaugerows, counterrows pgx.Rows
 	var err error
 	null := make(map[string]string)
 	gvalues := make(map[string]string)
 	cvalues := make(map[string]string)
-	err = p.pingDB(ctx)
+	err = p.pingDB(p.ctx)
 	if err != nil {
 		return null, null, err
 	}
 
-	gaugerows, err = p.conn.Query(ctx, QuerySelectAllGauge)
+	gaugerows, err = p.conn.Query(p.ctx, QuerySelectAllGauge)
 	if err != nil {
 		return null, null, err
 	}
@@ -235,7 +237,7 @@ func (p *PgStorageWithAttributes) GetAllMetricNames(ctx context.Context) (map[st
 		}
 		gvalues[name] = fmt.Sprintf("%v", v)
 	}
-	counterrows, err = p.conn.Query(ctx, QuerySelectAllCounter)
+	counterrows, err = p.conn.Query(p.ctx, QuerySelectAllCounter)
 	if err != nil {
 		return null, null, err
 	}
@@ -255,14 +257,14 @@ func (p *PgStorageWithAttributes) GetAllMetricNames(ctx context.Context) (map[st
 }
 
 // GetGauge Получение метрики Gauge
-func (p *PgStorageWithAttributes) GetGauge(ctx context.Context, name string) (model.Gauge, bool) {
+func (p *PgStorageWithAttributes) GetGauge(name string) (model.Gauge, bool) {
 	var value model.Gauge
 	var err error
-	err = p.pingDB(ctx)
+	err = p.pingDB(p.ctx)
 	if err != nil {
 		return 0, false
 	}
-	err = p.conn.QueryRow(ctx, QuerySelectGauge, name).Scan(&value)
+	err = p.conn.QueryRow(p.ctx, QuerySelectGauge, name).Scan(&value)
 	if err != nil {
 		return 0, false
 	}
@@ -270,14 +272,14 @@ func (p *PgStorageWithAttributes) GetGauge(ctx context.Context, name string) (mo
 }
 
 // GetCounter Получение метрики Counter
-func (p *PgStorageWithAttributes) GetCounter(ctx context.Context, name string) (model.Counter, bool) {
+func (p *PgStorageWithAttributes) GetCounter(name string) (model.Counter, bool) {
 	var value model.Counter
 	var err error
-	err = p.pingDB(ctx)
+	err = p.pingDB(p.ctx)
 	if err != nil {
 		return 0, false
 	}
-	err = p.conn.QueryRow(ctx, QuerySelectCounter, name).Scan(&value)
+	err = p.conn.QueryRow(p.ctx, QuerySelectCounter, name).Scan(&value)
 	if err != nil {
 		return 0, false
 	}
@@ -285,8 +287,8 @@ func (p *PgStorageWithAttributes) GetCounter(ctx context.Context, name string) (
 }
 
 // Load Dummy
-func (p *PgStorageWithAttributes) Load(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error {
-	if ctx.Err() != nil {
+func (p *PgStorageWithAttributes) Load(filePath string, interval uint, log *zap.SugaredLogger) error {
+	if p.ctx.Err() != nil {
 		return fmt.Errorf("operation interapted for method which implemented for postgresql database storage type with filepath %s and interval %d", filePath, interval)
 	}
 	return fmt.Errorf("method is not implemented for postgresql database storage type with filepath %s and interval %d", filePath, interval)

@@ -1,32 +1,31 @@
 package storage
 
 import (
-	"context"
 	"github.com/vyrodovalexey/metrics/internal/model"
 	"go.uber.org/zap"
 )
 
 type Storage interface {
 	// New Создание нового хранилища
-	New(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error
+	New(filePath string, interval uint, log *zap.SugaredLogger) error
 	// NewDatabaseConnection Создание соединения с базой данных
-	Check(ctx context.Context) error
+	Check() error
 	// Load Загрузка хранилища из файла
-	Load(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error
+	Load(filePath string, interval uint, log *zap.SugaredLogger) error
 	// UpdateGauge Добавление метрики Gauge
-	UpdateGauge(ctx context.Context, name string, item model.Gauge) error
+	UpdateGauge(name string, item model.Gauge) error
 	// UpdateCounter Добавление метрики Counter
-	UpdateCounter(ctx context.Context, name string, item model.Counter) error
+	UpdateCounter(name string, item model.Counter) error
 	// UpdateMetric Добавление метрики
-	UpdateMetric(ctx context.Context, metrics *model.Metrics) error
+	UpdateMetric(metrics *model.Metrics) error
 	// GetGauge Получение метрики Gauge
-	GetGauge(ctx context.Context, name string) (model.Gauge, bool)
+	GetGauge(name string) (model.Gauge, bool)
 	// GetCounter Получение метрики Counter
-	GetCounter(ctx context.Context, name string) (model.Counter, bool)
+	GetCounter(name string) (model.Counter, bool)
 	// GetMetric Получение метрики
-	GetMetric(ctx context.Context, metrics *model.Metrics) bool
+	GetMetric(metrics *model.Metrics) bool
 	// GetAllMetricNames Получение списка имен метрик
-	GetAllMetricNames(ctx context.Context) (map[string]string, map[string]string, error)
+	GetAllMetricNames() (map[string]string, map[string]string, error)
 	// SaveAsync Асинхронная сохранение данных хранилища в файл
 	SaveAsync()
 	// Save Сохранение данных хранилища в файл

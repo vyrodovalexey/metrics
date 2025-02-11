@@ -81,9 +81,8 @@ func UpdateMetrics(m *MemMetrics) {
 func shouldStop(counter int64, stop int64) bool {
 	if counter < stop || stop == -1 { // Если счетчик меньше значения остановки или значение остановки равно -1
 		return false // Не останавливаем
-	} else {
-		return true // Останавливаем
 	}
+	return true // Останавливаем
 }
 
 // Функция для записи метрик
