@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/vyrodovalexey/metrics/internal/model"
@@ -16,8 +17,13 @@ const (
 	EncodingGzip    = "gzip"
 )
 
+// Attributes структура для хранения информации о хранилище
+type Attributes struct {
+	St storage.Storage
+}
+
 // UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.
-func UpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
+func (a *Attributes) UpdateFromBodyJSON(ctx context.Context) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get(ContentType) != ContentTypeJSON {
@@ -44,7 +50,7 @@ func UpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 				return
 			}
 			// Обновляем метрику в хранилище
-			err = st.UpdateMetric(m)
+			err = a.St.UpdateMetric(ctx, m)
 			// Если произошла ошибка при обновлении, возвращаем ошибку 500 Internal Server Error
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -53,7 +59,7 @@ func UpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 				return
 			}
 			// Получаем обновленную метрику из хранилища
-			st.GetMetric(m)
+			a.St.GetMetric(ctx, m)
 			// Возвращаем обновленную метрику клиенту с кодом 200 OK
 			c.JSON(http.StatusOK, m)
 			return
@@ -62,7 +68,7 @@ func UpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 }
 
 // UpdateFromBodyJSON обновляет метрику из тела запроса в формате JSON.
-func BatchUpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
+func (a *Attributes) BatchUpdateFromBodyJSON(ctx context.Context) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get(ContentType) != ContentTypeJSON {
@@ -90,7 +96,7 @@ func BatchUpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 			}
 			for i := range *b {
 				// Обновляем метрику в хранилище
-				err = st.UpdateMetric(&(*b)[i])
+				err = a.St.UpdateMetric(ctx, &(*b)[i])
 				// Если произошла ошибка при обновлении, возвращаем ошибку 500 Internal Server Error
 				if err != nil {
 					c.JSON(http.StatusBadRequest, gin.H{
@@ -99,7 +105,7 @@ func BatchUpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 					return
 				}
 				// Получаем обновленную метрику из хранилища
-				st.GetMetric(&(*b)[i])
+				a.St.GetMetric(ctx, &(*b)[i])
 				// Возвращаем обновленную метрику клиенту с кодом 200 OK
 				c.JSON(http.StatusOK, &(*b)[i])
 			}
@@ -109,7 +115,7 @@ func BatchUpdateFromBodyJSON(st storage.Storage) gin.HandlerFunc {
 }
 
 // UpdateFromURLPath обновляет метрику из параметров URL.
-func UpdateFromURLPath(st storage.Storage) gin.HandlerFunc {
+func (a *Attributes) UpdateFromURLPath(ctx context.Context) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Создаем новую пустую метрику
 		m := &model.Metrics{}
@@ -121,23 +127,23 @@ func UpdateFromURLPath(st storage.Storage) gin.HandlerFunc {
 			return
 		}
 		// Обновляем метрику в хранилище
-		err = st.UpdateMetric(m)
+		err = a.St.UpdateMetric(ctx, m)
 		// Если произошла ошибка при обновлении, возвращаем ошибку 400
 		if err != nil {
 			c.String(http.StatusBadRequest, badrequest)
 			return
 		}
 		// Получаем обновленную метрику из хранилища
-		st.GetMetric(m)
+		a.St.GetMetric(ctx, m)
 		// Возвращаем обновленную метрику клиенту с кодом 200 OK
 		c.String(http.StatusOK, m.String())
 	}
 }
 
 // CheckDatabaseConnection проверяет соединение с базой данных.
-func CheckDatabaseConnection(st storage.Storage) gin.HandlerFunc {
+func (a *Attributes) CheckDatabaseConnection(ctx context.Context) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		err := st.Check()
+		err := a.St.Check(ctx)
 		if err != nil {
 			c.String(http.StatusInternalServerError, fmt.Sprintf("error: %v", err))
 		} else {
@@ -147,7 +153,7 @@ func CheckDatabaseConnection(st storage.Storage) gin.HandlerFunc {
 }
 
 // Get возвращает метрику по ее имени.
-func Get(st storage.Storage) gin.HandlerFunc {
+func (a *Attributes) Get(ctx context.Context) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Создаем новую пустую метрику
 		m := &model.Metrics{}
@@ -159,7 +165,7 @@ func Get(st storage.Storage) gin.HandlerFunc {
 			return
 		}
 		// Получаем метрику из хранилища
-		b := st.GetMetric(m)
+		b := a.St.GetMetric(ctx, m)
 		// Если метрика не найдена, возвращаем ошибку 404 Not Found
 		if !b {
 			c.String(http.StatusNotFound, badrequest)
@@ -171,7 +177,7 @@ func Get(st storage.Storage) gin.HandlerFunc {
 }
 
 // GetBodyJSON возвращает метрику из тела запроса в формате JSON.
-func GetBodyJSON(st storage.Storage) gin.HandlerFunc {
+func (a *Attributes) GetBodyJSON(ctx context.Context) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса - application/json
 		if c.Request.Header.Get(ContentType) != ContentTypeJSON {
@@ -197,7 +203,7 @@ func GetBodyJSON(st storage.Storage) gin.HandlerFunc {
 			return
 		}
 		// Получаем метрику из хранилища
-		b := st.GetMetric(m)
+		b := a.St.GetMetric(ctx, m)
 		// Если метрика не найдена, возвращаем ошибку 404 Not Found
 		if !b {
 			c.JSON(http.StatusNotFound, gin.H{
@@ -211,10 +217,10 @@ func GetBodyJSON(st storage.Storage) gin.HandlerFunc {
 }
 
 // GetAllKeys возвращает все ключи метрик.
-func GetAllKeys(st storage.Storage) gin.HandlerFunc {
+func (a *Attributes) GetAllKeys(ctx context.Context) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Получаем все ключи метрик из хранилища
-		gval, cval, err := st.GetAllMetricNames()
+		gval, cval, err := a.St.GetAllMetricNames(ctx)
 		if err != nil {
 			c.String(http.StatusInternalServerError, fmt.Sprintf("error: %v", err))
 		}

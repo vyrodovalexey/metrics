@@ -23,13 +23,14 @@ type MemStorageWithAttributes struct {
 	p        bool
 	interval uint
 	lg       *zap.SugaredLogger
-	ctx      context.Context
 }
 
 // New Создание нового хранилища
-func (m *MemStorageWithAttributes) New(filePath string, interval uint, log *zap.SugaredLogger) error {
+func (m *MemStorageWithAttributes) New(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error {
 	var err error
-	m.ctx = context.Background()
+	if ctx.Err() != nil {
+		return fmt.Errorf("operation interapted")
+	}
 	m.mst.GaugeMap = make(map[string]model.Gauge)
 	m.mst.CounterMap = make(map[string]model.Counter)
 	m.lg = log
@@ -57,39 +58,39 @@ func (m *MemStorageWithAttributes) New(filePath string, interval uint, log *zap.
 }
 
 // UpdateCounter Добавление метрики Counter
-func (m *MemStorageWithAttributes) UpdateCounter(name string, item model.Counter) error {
+func (m *MemStorageWithAttributes) UpdateCounter(ctx context.Context, name string, item model.Counter) error {
 	var err error
 	m.mst.CounterMap[name] += item // Увеличение значения счетчика
 	if m.p {
 		err = m.Save()
 	}
-	if m.ctx.Err() != nil {
+	if ctx.Err() != nil {
 		return nil
 	}
 	return err
 }
 
 // UpdateGauge Добавление метрики Gauge
-func (m *MemStorageWithAttributes) UpdateGauge(name string, item model.Gauge) error {
+func (m *MemStorageWithAttributes) UpdateGauge(ctx context.Context, name string, item model.Gauge) error {
 	var err error
 	m.mst.GaugeMap[name] = item
 	if m.p {
 		err = m.Save()
 	}
-	if m.ctx.Err() != nil {
+	if ctx.Err() != nil {
 		return nil
 	}
 	return err
 }
 
 // UpdateMetric Добавление метрики в формате model. Metrics
-func (m *MemStorageWithAttributes) UpdateMetric(metrics *model.Metrics) error {
+func (m *MemStorageWithAttributes) UpdateMetric(ctx context.Context, metrics *model.Metrics) error {
 	var err error
 	if metrics.MType == "counter" {
-		err = m.UpdateCounter(metrics.ID, *metrics.Delta)
+		err = m.UpdateCounter(ctx, metrics.ID, *metrics.Delta)
 	}
 	if metrics.MType == "gauge" {
-		err = m.UpdateGauge(metrics.ID, *metrics.Value)
+		err = m.UpdateGauge(ctx, metrics.ID, *metrics.Value)
 
 	}
 	if m.p {
@@ -99,16 +100,16 @@ func (m *MemStorageWithAttributes) UpdateMetric(metrics *model.Metrics) error {
 }
 
 // GetMetric Получение метрики в формате model. Metrics
-func (m *MemStorageWithAttributes) GetMetric(metrics *model.Metrics) bool {
+func (m *MemStorageWithAttributes) GetMetric(ctx context.Context, metrics *model.Metrics) bool {
 
 	if metrics.MType == "counter" {
-		i, b := m.GetCounter(metrics.ID)
+		i, b := m.GetCounter(ctx, metrics.ID)
 		metrics.Delta = &i
 		metrics.Value = nil
 		return b
 	}
 	if metrics.MType == "gauge" {
-		g, b := m.GetGauge(metrics.ID)
+		g, b := m.GetGauge(ctx, metrics.ID)
 		metrics.Value = &g
 		metrics.Delta = nil
 		return b
@@ -117,7 +118,7 @@ func (m *MemStorageWithAttributes) GetMetric(metrics *model.Metrics) bool {
 }
 
 // GetAllMetricNames Получение полного списка имен метрик
-func (m *MemStorageWithAttributes) GetAllMetricNames() (map[string]string, map[string]string, error) {
+func (m *MemStorageWithAttributes) GetAllMetricNames(ctx context.Context) (map[string]string, map[string]string, error) {
 	//to debug
 	//names := make([]string, 0, len(storage.GaugeMap)+len(storage.CounterMap))
 	gvalues := make(map[string]string, len(m.mst.GaugeMap))
@@ -125,13 +126,13 @@ func (m *MemStorageWithAttributes) GetAllMetricNames() (map[string]string, map[s
 	// Перебор карты и сбор ключей
 	for name := range m.mst.GaugeMap {
 
-		gv, _ := m.GetGauge(name)             // Получение значения измерителя
+		gv, _ := m.GetGauge(ctx, name)        // Получение значения измерителя
 		gvalues[name] = fmt.Sprintf("%v", gv) // Форматирование значения измерителя
 	}
 
 	for name := range m.mst.CounterMap {
 
-		cv, _ := m.GetCounter(name)           // Получение значения счетчика
+		cv, _ := m.GetCounter(ctx, name)      // Получение значения счетчика
 		cvalues[name] = fmt.Sprintf("%v", cv) // Форматирование значения счетчика
 	}
 
@@ -139,34 +140,34 @@ func (m *MemStorageWithAttributes) GetAllMetricNames() (map[string]string, map[s
 }
 
 // GetGauge Получение метрики Gauge
-func (m *MemStorageWithAttributes) GetGauge(name string) (model.Gauge, bool) {
+func (m *MemStorageWithAttributes) GetGauge(ctx context.Context, name string) (model.Gauge, bool) {
 	res, e := m.mst.GaugeMap[name]
 	if e {
 		return res, e
 	}
-	if m.ctx.Err() != nil {
+	if ctx.Err() != nil {
 		return 0, false
 	}
 	return 0, false
 }
 
 // GetCounter Получение метрики Counter
-func (m *MemStorageWithAttributes) GetCounter(name string) (model.Counter, bool) {
+func (m *MemStorageWithAttributes) GetCounter(ctx context.Context, name string) (model.Counter, bool) {
 	res, e := m.mst.CounterMap[name]
 	if e {
 		return res, e
 	}
-	if m.ctx.Err() != nil {
+	if ctx.Err() != nil {
 		return 0, false
 	}
 	return 0, false
 }
 
 // Load Загрузка данных хранилища метрик из файла
-func (m *MemStorageWithAttributes) Load(filePath string, interval uint, log *zap.SugaredLogger) error {
+func (m *MemStorageWithAttributes) Load(ctx context.Context, filePath string, interval uint, log *zap.SugaredLogger) error {
 	var err error
 	var byteValue []byte
-	err = m.New(filePath, interval, log) // Создание нового хранилища
+	err = m.New(ctx, filePath, interval, log) // Создание нового хранилища
 	if err != nil {
 		return err
 	}
@@ -239,8 +240,8 @@ func (m *MemStorageWithAttributes) Save() error {
 }
 
 // Check Проверка Dummy
-func (m *MemStorageWithAttributes) Check() error {
-	if m.ctx.Err() != nil {
+func (m *MemStorageWithAttributes) Check(ctx context.Context) error {
+	if ctx.Err() != nil {
 		return fmt.Errorf("operation interapted for method which not implemented for memory storage type")
 	}
 	return fmt.Errorf("method is not implemented for postgresql database storage type")

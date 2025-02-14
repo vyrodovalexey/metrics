@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/server/config"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
@@ -13,6 +14,7 @@ import (
 
 func main() {
 	var err error
+
 	// Создаем новый экземпляр конфигурации
 	cfg := config.New()
 	// Парсим настройки конфигурации
@@ -31,10 +33,11 @@ func main() {
 	// Инициализируем маршрутизатор с хранилищем и логированием
 	r := routing.SetupRouter(lg)
 
+	ctx := context.Background()
 	if cfg.DatabaseDSN != "" {
 		// Инициализируем интерфейс и структуру хранения данных
 		var st storage2.Storage = &pgstorage.PgStorageWithAttributes{}
-		err = st.New(cfg.DatabaseDSN, cfg.DatabaseTimeout, lg)
+		err = st.New(ctx, cfg.DatabaseDSN, cfg.DatabaseTimeout, lg)
 
 		if err != nil {
 			// Логируем ошибку, если подеключение к базе данных не удалось
@@ -43,8 +46,9 @@ func main() {
 			)
 			return
 		}
+		// При ассинхронном режиме запускаем фоновое сохранение структуры данных
 		// Настраиваем маршрутизацию
-		routing.ConfigureRouting(r, st)
+		routing.ConfigureRouting(ctx, r, st)
 		// Загружаем HTML-шаблоны из указанной директории
 		r.LoadHTMLGlob("templates/*")
 		// Запускаем HTTP-сервер на заданном адресе
@@ -57,7 +61,7 @@ func main() {
 		// Проверяем, нужно ли загружать файл хранилища
 		// Если нет, инициализируем новое
 		if cfg.Restore {
-			err = st.Load(cfg.FileStoragePath, cfg.StoreInterval, lg)
+			err = st.Load(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
 			if err != nil {
 				// Логируем ошибку, если открытие/создание файла не удалось
 				lg.Infow("Initializing file storage...",
@@ -67,7 +71,7 @@ func main() {
 			}
 		} else {
 			// Логируем ошибку, если открытие/создание файла не удалось
-			err = st.New(cfg.FileStoragePath, cfg.StoreInterval, lg)
+			err = st.New(ctx, cfg.FileStoragePath, cfg.StoreInterval, lg)
 			if err != nil {
 				lg.Infow("Initializing file storage...",
 					"Error creating file:", err,
@@ -83,7 +87,7 @@ func main() {
 			go st.SaveAsync()
 		}
 		// Настраиваем маршрутизацию
-		routing.ConfigureRouting(r, st)
+		routing.ConfigureRouting(ctx, r, st)
 		// Загружаем HTML-шаблоны из указанной директории
 		r.LoadHTMLGlob("templates/*")
 		// Запускаем HTTP-сервер на заданном адресе
