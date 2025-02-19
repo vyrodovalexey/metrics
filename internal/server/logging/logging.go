@@ -16,7 +16,7 @@ func NewLogging(loglevel zapcore.Level) *zap.SugaredLogger {
 
 	logger, err := loggerConfig.Build()
 	if err != nil {
-		log.Fatalf("can't initialize zap logger: %v", err)
+		log.Printf("can't initialize zap logger: %v", err)
 	}
 	// nolint:errcheck
 	defer logger.Sync()

@@ -14,7 +14,8 @@ func ConfigParser(cfg *config.Config) {
 	flag.IntVar(&cfg.ReportInterval, "r", cfg.ReportInterval, "seconds delay interval to send metrics to metrics server")
 	// Устанавливаем флаг для интервала опроса метрик в секундах
 	flag.IntVar(&cfg.PoolInterval, "p", cfg.PoolInterval, "seconds delay between scribing metrics from host")
-
+	// Устанавливаем флаг для использования батчевой отправки метрик
+	flag.BoolVar(&cfg.BatchMode, "b", cfg.BatchMode, "use batch mode for sending metrics")
 	// Парсим флаги командной строки
 	flag.Parse()
 
@@ -23,7 +24,7 @@ func ConfigParser(cfg *config.Config) {
 
 	if err != nil {
 		// Логируем ошибку, если не удалось распарсить переменные окружения
-		log.Fatalf("can't parse ENV: %v", err)
+		log.Printf("can't parse ENV: %v", err)
 	}
 
 }
