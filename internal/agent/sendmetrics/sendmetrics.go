@@ -18,6 +18,7 @@ const (
 	ContentTypeTextPlain = "text/plain"
 	ContentTypeJSON      = "application/json"
 	EncodingGzip         = "gzip"
+	Hash                 = "HashSHA256"
 )
 
 func SendRequest(cl *http.Client, req *http.Request) (*http.Response, error) {
@@ -41,10 +42,13 @@ func SendRequest(cl *http.Client, req *http.Request) (*http.Response, error) {
 	return resp, err
 }
 
-func SendAsJSONRequest(cl *http.Client, url string, jm []byte) error {
+func SendAsJSONRequest(cl *http.Client, url string, jm []byte, shasum [32]byte) error {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jm))
 	if err != nil {
 		log.Println(err) // Ошибка при создании запроса
+	}
+	if shasum != [32]byte{} {
+		req.Header.Set(Hash, fmt.Sprintf("%x", shasum))
 	}
 	// Установка типа контента запроса и кодировок
 	req.Header.Set(ContentType, ContentTypeJSON)
@@ -86,13 +90,16 @@ func SendAsJSONRequest(cl *http.Client, url string, jm []byte) error {
 }
 
 // SendAsPlain Отправка запроса в формате plaintext
-func SendAsPlain(cl *http.Client, url string) error {
+func SendAsPlain(cl *http.Client, url string, shasum [32]byte) error {
 	//timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	//defer cancel()
 	req, err := http.NewRequest("POST", url, http.NoBody)
 	if err != nil {
 		log.Printf("failed to create request: %v", err) // Ошибка при создании запроса
 		return err
+	}
+	if shasum != [32]byte{} {
+		req.Header.Set(Hash, fmt.Sprintf("%x", shasum))
 	}
 	// Установка типа контента запроса
 	req.Header.Set(ContentType, ContentTypeTextPlain)
@@ -109,20 +116,20 @@ func SendAsPlain(cl *http.Client, url string) error {
 }
 
 // SendAsJSON Отправка запроса в формате JSON
-func SendAsJSON(cl *http.Client, url string, m *model.Metrics) error {
+func SendAsJSON(cl *http.Client, url string, m *model.Metrics, shasum [32]byte) error {
 	jm, _ := json.Marshal(*m)
 	//timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	//defer cancel()
-	err := SendAsJSONRequest(cl, url, jm)
+	err := SendAsJSONRequest(cl, url, jm, shasum)
 	return err
 
 }
 
 // SendAsBatchJSON Отправка batch в формате JSON
-func SendAsBatchJSON(cl *http.Client, url string, b *model.MetricsBatch) error {
+func SendAsBatchJSON(cl *http.Client, url string, b *model.MetricsBatch, shasum [32]byte) error {
 	jm, _ := json.Marshal(*b)
 	//timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	//defer cancel()
-	err := SendAsJSONRequest(cl, url, jm)
+	err := SendAsJSONRequest(cl, url, jm, shasum)
 	return err
 }

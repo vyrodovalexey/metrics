@@ -16,6 +16,8 @@ func ConfigParser(cfg *config.Config) {
 	flag.IntVar(&cfg.PoolInterval, "p", cfg.PoolInterval, "seconds delay between scribing metrics from host")
 	// Устанавливаем флаг для использования батчевой отправки метрик
 	flag.BoolVar(&cfg.BatchMode, "b", cfg.BatchMode, "use batch mode for sending metrics")
+	// Устанавливаем флаг для ключа шифрования
+	flag.StringVar(&cfg.EncryptedKey, "k", cfg.EncryptedKey, "encrypter key")
 	// Парсим флаги командной строки
 	flag.Parse()
 
