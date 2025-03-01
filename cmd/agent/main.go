@@ -50,9 +50,13 @@ func main() {
 
 	// Инициализируем структуру для метрик
 	var met model.Metrics
+	var shasum [32]byte
 
-	shasum := sha256.Sum256([]byte(cfg.EncryptedKey))
-
+	if cfg.EncryptedKey != "" {
+		shasum = sha256.Sum256([]byte(cfg.EncryptedKey))
+	} else {
+		shasum = [32]byte{}
+	}
 	// Запускаем горутину для сбора метрик
 	go scribemetrics.ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {

@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/server/config"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
 	"github.com/vyrodovalexey/metrics/internal/server/memstorage"
@@ -30,7 +32,8 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 		t.Errorf("initializing file storage... Error: %v", err)
 	}
 
-	router := routing.SetupRouter(sugar)
+	shasum := [32]byte{}
+	router := routing.SetupRouter(sugar, shasum)
 	routing.ConfigureRouting(ctx, router, st)
 	router.LoadHTMLGlob("../../templates/*")
 
@@ -195,8 +198,182 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 
 }
 
+func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
+	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
+	ctx := context.Background()
+	sugar := logging.NewLogging(zap.InfoLevel)
+	// Создаем новый экземпляр конфигурации
+	err := st.New(ctx, "/tmp/metrics-storage.json", 0, sugar)
+	if err != nil {
+		t.Errorf("initializing file storage... Error: %v", err)
+	}
+	key := "test"
+	shasum := sha256.Sum256([]byte(key))
+
+	router := routing.SetupRouter(sugar, shasum)
+	routing.ConfigureRouting(ctx, router, st)
+	router.LoadHTMLGlob("../../templates/*")
+
+	testsNew := []struct {
+		name           string
+		method         string
+		url            string
+		hash           string
+		mimetype       string
+		body           string
+		expectedStatus int
+		expectedValue  string
+	}{
+		{
+			name:           "Valid Update gauge",
+			method:         http.MethodPost,
+			url:            "/update/gauge/test/1.454",
+			mimetype:       "text/plain",
+			hash:           fmt.Sprintf("%x", shasum),
+			expectedStatus: http.StatusOK,
+			expectedValue:  "1.454",
+		},
+		{
+			name:           "Valid Update counter",
+			method:         http.MethodPost,
+			url:            "/update/counter/test/1",
+			mimetype:       "text/plain",
+			hash:           "",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid Method",
+			method:         http.MethodGet,
+			url:            "/update/gauge/test/1.12",
+			hash:           fmt.Sprintf("%x", shasum),
+			mimetype:       "text/plain",
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "Invalid Gauge",
+			method:         http.MethodPost,
+			url:            "/update/gauge/test/test",
+			hash:           fmt.Sprintf("%x", shasum),
+			mimetype:       "text/plain",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid Counter",
+			method:         http.MethodPost,
+			url:            "/update/counter/test/1.12",
+			hash:           fmt.Sprintf("%x", shasum),
+			mimetype:       "text/plain",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Get gauge",
+			method:         http.MethodGet,
+			url:            "/value/gauge/test",
+			hash:           fmt.Sprintf("%x", shasum),
+			mimetype:       "text/plain",
+			expectedStatus: http.StatusOK,
+			expectedValue:  "1.454",
+		},
+		{
+			name:           "Invalid Get gauge",
+			method:         http.MethodGet,
+			url:            "/value/gauge/unavailable",
+			hash:           fmt.Sprintf("%x", shasum),
+			mimetype:       "text/plain",
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "Get /",
+			method:         http.MethodGet,
+			hash:           fmt.Sprintf("%x", shasum),
+			url:            "/",
+			mimetype:       "text/html",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Post Counter Json /update",
+			hash:           fmt.Sprintf("%x", shasum),
+			method:         http.MethodPost,
+			url:            "/update/",
+			mimetype:       "application/json",
+			body:           "{\"id\":\"test\",\"type\":\"counter\",\"delta\":1}",
+			expectedStatus: http.StatusOK,
+			expectedValue:  "{\"id\":\"test\",\"type\":\"counter\",\"delta\":1}",
+		},
+		{
+			name:           "Post Counter Json /value",
+			hash:           fmt.Sprintf("%x", shasum),
+			method:         http.MethodPost,
+			url:            "/value/",
+			mimetype:       "application/json",
+			body:           "{\"id\":\"test\",\"type\":\"counter\",\"delta\":5}",
+			expectedStatus: http.StatusOK,
+			expectedValue:  "{\"id\":\"test\",\"type\":\"counter\",\"delta\":1}",
+		},
+		{
+			name:           "Post Gauge Json /update",
+			hash:           "",
+			method:         http.MethodPost,
+			url:            "/update/",
+			mimetype:       "application/json",
+			body:           "{\"id\":\"testjson\",\"type\":\"gauge\",\"value\":1.678}",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Post Json Batch /updates/",
+			method:         http.MethodPost,
+			hash:           fmt.Sprintf("%x", shasum),
+			url:            "/updates/",
+			mimetype:       "application/json",
+			body:           "[{\"id\":\"test\",\"type\":\"counter\",\"delta\":1},{\"id\":\"testbatch\",\"type\":\"gauge\",\"value\":1.5}]",
+			expectedStatus: http.StatusOK,
+			expectedValue:  "{\"id\":\"test\",\"type\":\"counter\",\"delta\":2}{\"id\":\"testbatch\",\"type\":\"gauge\",\"value\":1.5}",
+		},
+		{
+			name:           "Post Gauge Json /value",
+			method:         http.MethodPost,
+			hash:           fmt.Sprintf("%x", shasum),
+			url:            "/value/",
+			mimetype:       "application/json",
+			body:           "{\"id\":\"testbatch\",\"type\":\"gauge\"}",
+			expectedStatus: http.StatusOK,
+			expectedValue:  "{\"id\":\"testbatch\",\"type\":\"gauge\",\"value\":1.5}",
+		},
+	}
+
+	for _, tt := range testsNew {
+		t.Run(tt.name, func(t *testing.T) {
+			var body io.Reader
+			if tt.body == "" {
+				body = nil
+			} else {
+				body = bytes.NewBuffer([]byte(tt.body))
+			}
+			req := httptest.NewRequest(tt.method, tt.url, body)
+			req.Header.Add("Content-Type", tt.mimetype)
+			req.Header.Add("HashSHA256", tt.hash)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			if tt.expectedValue != "" {
+				if w.Body.String() != tt.expectedValue {
+					t.Errorf("expected value %s, got %s", tt.expectedValue, w.Body.String())
+				} else {
+					t.Logf("expected value %s, got %s", tt.expectedValue, w.Body.String())
+				}
+			}
+			if w.Code != tt.expectedStatus {
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
+			}
+
+		})
+	}
+	st.Close()
+
+}
+
 func TestMemStorageSyncLoad(t *testing.T) {
 	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
+
 	ctx := context.Background()
 	sugar := logging.NewLogging(zap.InfoLevel)
 	err := st.Load(ctx, "../../test/data/metrics-storage.json", 0, sugar)
@@ -208,7 +385,9 @@ func TestMemStorageSyncLoad(t *testing.T) {
 		return
 	}
 
-	router := routing.SetupRouter(sugar)
+	shasum := [32]byte{}
+
+	router := routing.SetupRouter(sugar, shasum)
 	routing.ConfigureRouting(ctx, router, st)
 	router.LoadHTMLGlob("../../templates/*")
 

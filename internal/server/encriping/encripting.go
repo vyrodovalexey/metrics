@@ -18,5 +18,6 @@ func CheckShaSumHeader(shasum [32]byte) gin.HandlerFunc {
 			return
 		}
 		c.Next()
+		c.Header("HashSHA256", fmt.Sprintf("%x", shasum))
 	}
 }
