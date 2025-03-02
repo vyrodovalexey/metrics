@@ -9,7 +9,17 @@ import (
 	"net/http"
 )
 
-func CheckShaSumHeader(key string) gin.HandlerFunc {
+type bodyWriter struct {
+	gin.ResponseWriter
+	body *bytes.Buffer
+}
+
+func (w *bodyWriter) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return w.ResponseWriter.Write(b)
+}
+
+func VerifyHashMiddleware(key string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		receivedHash := c.GetHeader("HashSHA256")
 		bodyBytes, err := io.ReadAll(c.Request.Body)
@@ -29,5 +39,22 @@ func CheckShaSumHeader(key string) gin.HandlerFunc {
 			return
 		}
 		c.Next()
+	}
+}
+
+func AddResponseHashMiddleware(key string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		writer := &bodyWriter{body: bytes.NewBuffer(nil), ResponseWriter: c.Writer}
+		c.Writer = writer
+
+		c.Next()
+
+		body := writer.body.Bytes()
+		hash := sha256.New()
+		hash.Write(body)
+		hash.Write([]byte(key))
+		computedHash := hex.EncodeToString(hash.Sum(nil))
+		c.Writer.Header().Set("HashSHA256", computedHash)
 	}
 }

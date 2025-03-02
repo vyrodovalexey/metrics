@@ -22,7 +22,8 @@ func SetupRouter(log *zap.SugaredLogger, key string) *gin.Engine {
 	router.Use(logging.LoggingMiddleware(log))
 	if key != "" {
 		// Добавление middleware для проверки хеша
-		router.Use(hash.CheckShaSumHeader(key))
+		router.Use(hash.VerifyHashMiddleware(key))
+		router.Use(hash.AddResponseHashMiddleware(key))
 	}
 	// Добавление middleware для сжатия ответа
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
