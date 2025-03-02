@@ -5,6 +5,7 @@ const (
 	defaultReportInterval = 10               // Интервал отправки метрик по умолчанию (в секундах)
 	defaultPoolInterval   = 2                // Интервал опроса метрик по умолчанию (в секундах)
 	defaultBatchMode      = true
+	defaultKey            = ""
 )
 
 // Config Структура для хранения конфигурации
@@ -13,6 +14,7 @@ type Config struct {
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PoolInterval   int    `env:"POLL_INTERVAL"`
 	BatchMode      bool   `env:"BATCH_MODE"`
+	EncryptedKey   string `env:"KEY"`
 }
 
 // New Функция для создания нового экземпляра конфигурации
@@ -22,5 +24,6 @@ func New() *Config {
 		defaultReportInterval,
 		defaultPoolInterval,
 		defaultBatchMode,
+		defaultKey,
 	}
 }

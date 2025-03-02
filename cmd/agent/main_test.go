@@ -52,6 +52,7 @@ func TestScribeMetrics(t *testing.T) {
 
 func TestSendRequests(t *testing.T) {
 	var err error
+	key := ""
 	s := 2.12
 	m := model.Metrics{ID: "test", MType: "gauge", Value: &s}
 	b := model.MetricsBatch{}
@@ -61,15 +62,15 @@ func TestSendRequests(t *testing.T) {
 	}))
 	defer ts.Close()
 	client := httpClient()
-	err = sendmetrics.SendAsJSON(client, ts.URL, &m)
+	err = sendmetrics.SendAsJSON(client, ts.URL, &m, key)
 	if err != nil {
 		t.Fatalf("Failed to send JSON request: %v", err)
 	}
-	err = sendmetrics.SendAsBatchJSON(client, ts.URL, &b)
+	err = sendmetrics.SendAsBatchJSON(client, ts.URL, &b, key)
 	if err != nil {
 		t.Fatalf("Failed to send JSONBatch request: %v", err)
 	}
-	err = sendmetrics.SendAsPlain(client, fmt.Sprintf("%s/update/gauge/test/2.12", ts.URL))
+	err = sendmetrics.SendAsPlain(client, fmt.Sprintf("%s/update/gauge/test/2.12", ts.URL), key)
 	if err != nil {
 		t.Fatalf("Failed to send JSON request: %v", err)
 	}
@@ -77,7 +78,7 @@ func TestSendRequests(t *testing.T) {
 
 func TestSendRequestsWithServerUnavailable(t *testing.T) {
 	var err error
-
+	key := ""
 	s := 2.12
 	m := model.Metrics{ID: "test", MType: "gauge", Value: &s}
 	b := model.MetricsBatch{}
@@ -108,15 +109,15 @@ func TestSendRequestsWithServerUnavailable(t *testing.T) {
 		Transport: customTransport,
 	}
 
-	err = sendmetrics.SendAsJSON(client, ts.URL, &m)
+	err = sendmetrics.SendAsJSON(client, ts.URL, &m, key)
 	if err != nil {
 		t.Fatalf("Failed to send JSON request: %v", err)
 	}
-	err = sendmetrics.SendAsBatchJSON(client, ts.URL, &b)
+	err = sendmetrics.SendAsBatchJSON(client, ts.URL, &b, key)
 	if err != nil {
 		t.Fatalf("Failed to send JSONBatch request: %v", err)
 	}
-	err = sendmetrics.SendAsPlain(client, fmt.Sprintf("%s/update/gauge/test/2.12", ts.URL))
+	err = sendmetrics.SendAsPlain(client, fmt.Sprintf("%s/update/gauge/test/2.12", ts.URL), key)
 	if err != nil {
 		t.Fatalf("Failed to send JSON request: %v", err)
 	}

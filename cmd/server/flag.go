@@ -21,6 +21,9 @@ func ConfigParser(cfg *config.Config) {
 	flag.StringVar(&cfg.DatabaseDSN, "d", cfg.DatabaseDSN, "database connection string")
 	// Устанавливаем флаг для таймаута базы данных
 	flag.UintVar(&cfg.DatabaseTimeout, "t", cfg.DatabaseTimeout, "database timeout")
+	// Устанавливаем флаг для ключа шифрования
+	flag.StringVar(&cfg.EncryptedKey, "k", cfg.EncryptedKey, "encrypted key")
+
 	flag.Parse() // Парсим флаги командной строки
 
 	// Парсим переменные окружения и сохраняем их в конфигурацию и перезаписывая существующие

@@ -80,10 +80,10 @@ func main() {
 					batch[i] = met
 				case sendJSON:
 					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
-					err = sendmetrics.SendAsJSON(client, r, &met)
+					err = sendmetrics.SendAsJSON(client, r, &met, cfg.EncryptedKey)
 				default:
 					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metricSetup, typ.Field(i).Name, val.Field(i))
-					err = sendmetrics.SendAsPlain(client, r)
+					err = sendmetrics.SendAsPlain(client, r, cfg.EncryptedKey)
 				}
 				if err != nil {
 					log.Println(err)
@@ -91,7 +91,7 @@ func main() {
 			}
 			if cfg.BatchMode {
 				r := fmt.Sprintf("http://%s/updates/", cfg.EndpointAddr)
-				err = sendmetrics.SendAsBatchJSON(client, r, &batch)
+				err = sendmetrics.SendAsBatchJSON(client, r, &batch, cfg.EncryptedKey)
 			}
 			if err != nil {
 				log.Println(err)

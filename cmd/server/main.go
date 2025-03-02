@@ -29,9 +29,12 @@ func main() {
 		"File store path", cfg.FileStoragePath,
 		"Load storage file on start true/false", cfg.Restore,
 		"Store interval in sec", cfg.StoreInterval,
+		"Hash key", cfg.EncryptedKey,
 	)
+
 	// Инициализируем маршрутизатор с хранилищем и логированием
-	r := routing.SetupRouter(lg)
+
+	r := routing.SetupRouter(lg, cfg.EncryptedKey)
 
 	ctx := context.Background()
 	if cfg.DatabaseDSN != "" {

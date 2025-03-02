@@ -7,6 +7,7 @@ const (
 	defaultRestore         = true                        // Флаг загрузки файла данных при запуске по умолчанию (включено)
 	defaultDatabaseDSN     = ""                          // Строка подключения к базе данных по умолчанию (пустая строка)
 	defaultDatabaseTimeout = 0                           // Таймаут подключения к базе данных по умолчанию (в секундах)
+	defaultEncryptedKey    = ""                          // Ключ шифрования по умолчанию (пустая строка)
 )
 
 // Config Структура для хранения конфигурации
@@ -17,6 +18,7 @@ type Config struct {
 	Restore         bool   `env:"RESTORE"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	DatabaseTimeout uint   `env:"DATABASE_TIMEOUT"`
+	EncryptedKey    string `env:"KEY"`
 }
 
 // New Функция для создания нового экземпляра конфигурации
@@ -28,5 +30,6 @@ func New() *Config {
 		defaultRestore,
 		defaultDatabaseDSN,
 		defaultDatabaseTimeout,
+		defaultEncryptedKey,
 	}
 }

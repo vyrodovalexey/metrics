@@ -5,13 +5,14 @@ import (
 	"github.com/gin-gonic/contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/vyrodovalexey/metrics/internal/server/handlers"
+	"github.com/vyrodovalexey/metrics/internal/server/hash"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
 	"github.com/vyrodovalexey/metrics/internal/server/storage"
 	"go.uber.org/zap"
 	"io"
 )
 
-func SetupRouter(log *zap.SugaredLogger) *gin.Engine {
+func SetupRouter(log *zap.SugaredLogger, key string) *gin.Engine {
 	// Установка режима работы Gin в release-режиме
 	gin.SetMode(gin.ReleaseMode)
 	// Установка стандартного вывода Gin в discard-режиме
@@ -19,6 +20,11 @@ func SetupRouter(log *zap.SugaredLogger) *gin.Engine {
 	router := gin.Default()
 	// Добавление middleware для логирования
 	router.Use(logging.LoggingMiddleware(log))
+	if key != "" {
+		// Добавление middleware для проверки хеша
+		router.Use(hash.VerifyHashMiddleware(key))
+		router.Use(hash.AddResponseHashMiddleware(key))
+	}
 	// Добавление middleware для сжатия ответа
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	return router
