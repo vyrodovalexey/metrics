@@ -48,13 +48,12 @@ func AddResponseHashMiddleware(key string) gin.HandlerFunc {
 		writer := &bodyWriter{body: bytes.NewBuffer(nil), ResponseWriter: c.Writer}
 		c.Writer = writer
 
-		c.Next()
-
 		body := writer.body.Bytes()
 		hash := sha256.New()
 		hash.Write(body)
 		hash.Write([]byte(key))
 		computedHash := hex.EncodeToString(hash.Sum(nil))
 		c.Writer.Header().Set("HashSHA256", computedHash)
+		c.Next()
 	}
 }
