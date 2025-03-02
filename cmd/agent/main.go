@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/agent/config"
 	"github.com/vyrodovalexey/metrics/internal/agent/scribemetrics"
@@ -50,13 +49,7 @@ func main() {
 
 	// Инициализируем структуру для метрик
 	var met model.Metrics
-	var shasum [32]byte
 
-	if cfg.EncryptedKey != "" {
-		shasum = sha256.Sum256([]byte(cfg.EncryptedKey))
-	} else {
-		shasum = [32]byte{}
-	}
 	// Запускаем горутину для сбора метрик
 	go scribemetrics.ScribeMetrics(&m, time.Duration(cfg.PoolInterval), -1)
 	for {
@@ -87,10 +80,10 @@ func main() {
 					batch[i] = met
 				case sendJSON:
 					r := fmt.Sprintf("http://%s/update/", cfg.EndpointAddr)
-					err = sendmetrics.SendAsJSON(client, r, &met, shasum)
+					err = sendmetrics.SendAsJSON(client, r, &met, cfg.EncryptedKey)
 				default:
 					r := fmt.Sprintf("http://%s/update/%s/%s/%v", cfg.EndpointAddr, metricSetup, typ.Field(i).Name, val.Field(i))
-					err = sendmetrics.SendAsPlain(client, r, shasum)
+					err = sendmetrics.SendAsPlain(client, r, cfg.EncryptedKey)
 				}
 				if err != nil {
 					log.Println(err)
@@ -98,7 +91,7 @@ func main() {
 			}
 			if cfg.BatchMode {
 				r := fmt.Sprintf("http://%s/updates/", cfg.EndpointAddr)
-				err = sendmetrics.SendAsBatchJSON(client, r, &batch, shasum)
+				err = sendmetrics.SendAsBatchJSON(client, r, &batch, cfg.EncryptedKey)
 			}
 			if err != nil {
 				log.Println(err)

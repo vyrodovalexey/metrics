@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"github.com/vyrodovalexey/metrics/internal/server/config"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
@@ -20,7 +19,6 @@ func main() {
 	cfg := config.New()
 	// Парсим настройки конфигурации
 	ConfigParser(cfg)
-	var shasum [32]byte
 	// Инициализируем логирование с уровнем Info
 	lg := logging.NewLogging(zap.InfoLevel)
 
@@ -34,14 +32,9 @@ func main() {
 		"Encrypted key", cfg.EncryptedKey,
 	)
 
-	if cfg.EncryptedKey != "" {
-		shasum = sha256.Sum256([]byte(cfg.EncryptedKey))
-	} else {
-		shasum = [32]byte{}
-	}
 	// Инициализируем маршрутизатор с хранилищем и логированием
 
-	r := routing.SetupRouter(lg, shasum)
+	r := routing.SetupRouter(lg, cfg.EncryptedKey)
 
 	ctx := context.Background()
 	if cfg.DatabaseDSN != "" {

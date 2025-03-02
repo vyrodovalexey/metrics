@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"fmt"
+	"encoding/hex"
 	"github.com/vyrodovalexey/metrics/internal/server/config"
 	"github.com/vyrodovalexey/metrics/internal/server/logging"
 	"github.com/vyrodovalexey/metrics/internal/server/memstorage"
@@ -32,8 +32,8 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 		t.Errorf("initializing file storage... Error: %v", err)
 	}
 
-	shasum := [32]byte{}
-	router := routing.SetupRouter(sugar, shasum)
+	key := ""
+	router := routing.SetupRouter(sugar, key)
 	routing.ConfigureRouting(ctx, router, st)
 	router.LoadHTMLGlob("../../templates/*")
 
@@ -198,7 +198,7 @@ func TestRequestsMemStorageSyncNew(t *testing.T) {
 
 }
 
-func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
+func TestRequestsMemStorageSyncNewHash(t *testing.T) {
 	var st storage2.Storage = &memstorage.MemStorageWithAttributes{}
 	ctx := context.Background()
 	sugar := logging.NewLogging(zap.InfoLevel)
@@ -208,9 +208,8 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 		t.Errorf("initializing file storage... Error: %v", err)
 	}
 	key := "test"
-	shasum := sha256.Sum256([]byte(key))
 
-	router := routing.SetupRouter(sugar, shasum)
+	router := routing.SetupRouter(sugar, key)
 	routing.ConfigureRouting(ctx, router, st)
 	router.LoadHTMLGlob("../../templates/*")
 
@@ -218,7 +217,7 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 		name           string
 		method         string
 		url            string
-		hash           string
+		key            string
 		mimetype       string
 		body           string
 		expectedStatus int
@@ -229,7 +228,7 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 			method:         http.MethodPost,
 			url:            "/update/gauge/test/1.454",
 			mimetype:       "text/plain",
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			expectedStatus: http.StatusOK,
 			expectedValue:  "1.454",
 		},
@@ -238,14 +237,14 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 			method:         http.MethodPost,
 			url:            "/update/counter/test/1",
 			mimetype:       "text/plain",
-			hash:           "",
+			key:            "",
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "Invalid Method",
 			method:         http.MethodGet,
 			url:            "/update/gauge/test/1.12",
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			mimetype:       "text/plain",
 			expectedStatus: http.StatusNotFound,
 		},
@@ -253,7 +252,7 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 			name:           "Invalid Gauge",
 			method:         http.MethodPost,
 			url:            "/update/gauge/test/test",
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			mimetype:       "text/plain",
 			expectedStatus: http.StatusBadRequest,
 		},
@@ -261,7 +260,7 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 			name:           "Invalid Counter",
 			method:         http.MethodPost,
 			url:            "/update/counter/test/1.12",
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			mimetype:       "text/plain",
 			expectedStatus: http.StatusBadRequest,
 		},
@@ -269,7 +268,7 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 			name:           "Get gauge",
 			method:         http.MethodGet,
 			url:            "/value/gauge/test",
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			mimetype:       "text/plain",
 			expectedStatus: http.StatusOK,
 			expectedValue:  "1.454",
@@ -278,21 +277,21 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 			name:           "Invalid Get gauge",
 			method:         http.MethodGet,
 			url:            "/value/gauge/unavailable",
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			mimetype:       "text/plain",
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "Get /",
 			method:         http.MethodGet,
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			url:            "/",
 			mimetype:       "text/html",
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Post Counter Json /update",
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			method:         http.MethodPost,
 			url:            "/update/",
 			mimetype:       "application/json",
@@ -302,7 +301,7 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 		},
 		{
 			name:           "Post Counter Json /value",
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			method:         http.MethodPost,
 			url:            "/value/",
 			mimetype:       "application/json",
@@ -312,7 +311,7 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 		},
 		{
 			name:           "Post Gauge Json /update",
-			hash:           "",
+			key:            "",
 			method:         http.MethodPost,
 			url:            "/update/",
 			mimetype:       "application/json",
@@ -322,7 +321,7 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 		{
 			name:           "Post Json Batch /updates/",
 			method:         http.MethodPost,
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			url:            "/updates/",
 			mimetype:       "application/json",
 			body:           "[{\"id\":\"test\",\"type\":\"counter\",\"delta\":1},{\"id\":\"testbatch\",\"type\":\"gauge\",\"value\":1.5}]",
@@ -332,7 +331,7 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 		{
 			name:           "Post Gauge Json /value",
 			method:         http.MethodPost,
-			hash:           fmt.Sprintf("%x", shasum),
+			key:            key,
 			url:            "/value/",
 			mimetype:       "application/json",
 			body:           "{\"id\":\"testbatch\",\"type\":\"gauge\"}",
@@ -350,8 +349,12 @@ func TestRequestsMemStorageSyncNewEncription(t *testing.T) {
 				body = bytes.NewBuffer([]byte(tt.body))
 			}
 			req := httptest.NewRequest(tt.method, tt.url, body)
+			hash := sha256.New()
+			hash.Write([]byte(tt.body))
+			hash.Write([]byte(tt.key))
+			computedHash := hex.EncodeToString(hash.Sum(nil))
+			req.Header.Add("HashSHA256", computedHash)
 			req.Header.Add("Content-Type", tt.mimetype)
-			req.Header.Add("HashSHA256", tt.hash)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 			if tt.expectedValue != "" {
@@ -385,9 +388,9 @@ func TestMemStorageSyncLoad(t *testing.T) {
 		return
 	}
 
-	shasum := [32]byte{}
+	key := ""
 
-	router := routing.SetupRouter(sugar, shasum)
+	router := routing.SetupRouter(sugar, key)
 	routing.ConfigureRouting(ctx, router, st)
 	router.LoadHTMLGlob("../../templates/*")
 
