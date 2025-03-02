@@ -29,7 +29,7 @@ func main() {
 		"File store path", cfg.FileStoragePath,
 		"Load storage file on start true/false", cfg.Restore,
 		"Store interval in sec", cfg.StoreInterval,
-		"Encrypted key", cfg.EncryptedKey,
+		"Hash key", cfg.EncryptedKey,
 	)
 
 	// Инициализируем маршрутизатор с хранилищем и логированием

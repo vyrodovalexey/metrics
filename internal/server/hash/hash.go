@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
@@ -24,6 +25,7 @@ func CheckShaSumHeader(key string) gin.HandlerFunc {
 		computedHash := hex.EncodeToString(hash.Sum(nil))
 
 		receivedHash := c.GetHeader("HashSHA256")
+		fmt.Println(receivedHash, computedHash)
 		if computedHash != receivedHash {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
